@@ -505,6 +505,59 @@
         color: var(--dim-green);
       }
 
+      .config-form {
+        display: grid;
+        gap: 16px;
+        max-width: 720px;
+      }
+
+      .config-field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .config-field label {
+        color: var(--dim-green);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .config-field input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        background: var(--black);
+        color: var(--green);
+        font: inherit;
+      }
+
+      .config-field input:focus {
+        outline: 1px solid var(--green);
+        box-shadow: 0 0 10px rgba(0, 255, 102, 0.18);
+      }
+
+      .config-hint {
+        color: var(--muted-green);
+        font-size: 12px;
+      }
+
+      .config-button {
+        width: fit-content;
+        padding: 10px 16px;
+        border: 1px solid var(--green);
+        background: var(--panel);
+        color: var(--green);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .config-button:hover,
+      .config-button:focus-visible {
+        outline: none;
+        background: var(--green);
+        color: var(--black);
+      }
+
       .video:hover {
         border-color: var(--green);
 
@@ -791,10 +844,38 @@
           <div class="help-command"><code>top-vids</code><span>Rank the current videos by total views.</span></div>
           <div class="help-command"><code>alerts</code><span>Scan recent channel signals and 30-day growth.</span></div>
           <div class="help-command"><code>system</code><span>Show server uptime, API configuration and history status.</span></div>
+          <div class="help-command"><code>config</code><span>Edit local YouTube API settings without needing an .env file.</span></div>
           <div class="help-command"><code>help</code><span>Show this command reference.</span></div>
         </div>
         <div class="data-panel" style="margin-top: 15px; color: var(--dim-green);">
           Type a command in the path bar above and press <code style="color: var(--green);">Enter</code>. Use <code style="color: var(--green);">dashboard</code> to return home.
+        </div>
+      </section>
+
+      <section id="configView" class="page-view" hidden>
+        <div class="section-title">LOCAL CONFIGURATION</div>
+        <div class="data-panel config-form">
+          <div class="config-field">
+            <label for="configApiKey">YOUTUBE_API_KEY</label>
+            <input
+              id="configApiKey"
+              type="password"
+              autocomplete="new-password"
+              placeholder="Leave empty to keep the current key"
+            />
+            <div id="configApiKeyStatus" class="config-hint"></div>
+          </div>
+          <div class="config-field">
+            <label for="configChannelId">YOUTUBE_CHANNEL_ID</label>
+            <input id="configChannelId" type="text" autocomplete="off" />
+          </div>
+          <button id="saveConfig" class="config-button" type="button">
+            Save local configuration
+          </button>
+          <div id="configMessage" class="config-hint"></div>
+        </div>
+        <div class="data-panel config-hint" style="margin-top: 15px;">
+          Values are saved locally in <code style="color: var(--green);">data/config.json</code>. The API key is never shown in full and this file is ignored by Git.
         </div>
       </section>
 
@@ -1014,6 +1095,58 @@
         }
       }
 
+      async function loadConfig() {
+        const message = document.getElementById("configMessage");
+        try {
+          const response = await fetch("/api/config");
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+          document.getElementById("configChannelId").value =
+            data.youtubeChannelId || "";
+          document.getElementById("configApiKeyStatus").textContent =
+            data.youtubeApiKeyConfigured
+              ? `Current key: ${data.youtubeApiKey}`
+              : "No API key configured yet.";
+          message.textContent = "Configuration loaded.";
+        } catch (error) {
+          console.error(error);
+          message.textContent = "ERROR: Unable to load configuration.";
+        }
+      }
+
+      async function saveConfig() {
+        const button = document.getElementById("saveConfig");
+        const message = document.getElementById("configMessage");
+        const apiKey = document.getElementById("configApiKey").value.trim();
+        const channelId = document.getElementById("configChannelId").value.trim();
+        const payload = { youtubeChannelId: channelId };
+        if (apiKey) payload.youtubeApiKey = apiKey;
+
+        button.disabled = true;
+        message.textContent = "Saving local configuration...";
+        try {
+          const response = await fetch("/api/config", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+          document.getElementById("configApiKey").value = "";
+          document.getElementById("configApiKeyStatus").textContent =
+            data.youtubeApiKeyConfigured
+              ? `Current key: ${data.youtubeApiKey}`
+              : "No API key configured yet.";
+          message.textContent = "Saved. New settings are active immediately.";
+          loadChannel();
+        } catch (error) {
+          console.error(error);
+          message.textContent = "ERROR: Unable to save configuration.";
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       function formatGrowth(growth) {
         if (growth.value === null) return "---";
         return `${growth.value >= 0 ? "+" : ""}${formatNumber(growth.value)}`;
@@ -1168,6 +1301,7 @@
         const isAlertsPage = pageName === "alerts";
         const isSystemPage = pageName === "system";
         const isHelpPage = pageName === "help";
+        const isConfigPage = pageName === "config";
         const currentPage = isVideoPage
           ? "vid-data"
           : isTopVideosPage
@@ -1178,14 +1312,17 @@
                 ? "system"
                 : isHelpPage
                   ? "help"
+                  : isConfigPage
+                    ? "config"
                 : "dashboard";
         document.getElementById("dashboardView").hidden =
-          isVideoPage || isTopVideosPage || isAlertsPage || isSystemPage || isHelpPage;
+          isVideoPage || isTopVideosPage || isAlertsPage || isSystemPage || isHelpPage || isConfigPage;
         document.getElementById("videoView").hidden = !isVideoPage;
         document.getElementById("topVideosView").hidden = !isTopVideosPage;
         document.getElementById("alertsView").hidden = !isAlertsPage;
         document.getElementById("systemView").hidden = !isSystemPage;
         document.getElementById("helpView").hidden = !isHelpPage;
+        document.getElementById("configView").hidden = !isConfigPage;
         document.getElementById("pageCommand").textContent = isVideoPage
           ? "videos --all --live"
           : isTopVideosPage
@@ -1196,6 +1333,8 @@
                 ? "system --status"
                 : isHelpPage
                   ? "help --commands"
+                  : isConfigPage
+                    ? "config --local"
                 : "monitor --channel youtube --live";
         dashboardName.value = currentPage;
         resizeDashboardName();
@@ -1218,6 +1357,8 @@
           loadAlerts();
         } else if (isSystemPage) {
           loadSystem();
+        } else if (isConfigPage) {
+          loadConfig();
         }
       }
 
@@ -1237,7 +1378,7 @@
           event.preventDefault();
           const requestedPage = dashboardName.value.toLowerCase();
           if (
-            ["vid-data", "dashboard", "top-vids", "alerts", "system", "help"].includes(
+            ["vid-data", "dashboard", "top-vids", "alerts", "system", "help", "config"].includes(
               requestedPage,
             )
           ) {
@@ -1246,6 +1387,8 @@
           dashboardName.blur();
         }
       });
+
+      document.getElementById("saveConfig").addEventListener("click", saveConfig);
 
       window.addEventListener("popstate", () => {
         const path = window.location.pathname;

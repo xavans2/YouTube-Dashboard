@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test",
-    "lint": "node --check server.js && node --check lib/history.js && node --check lib/history-store.js && node --check lib/snapshot-job.js && node --check scripts/collect-snapshot.js",
+    "lint": "node --check server.js && node --check lib/history.js && node --check lib/history-store.js && node --check lib/config-store.js && node --check lib/snapshot-job.js && node --check scripts/collect-snapshot.js",
     "collect:snapshot": "node scripts/collect-snapshot.js"
   },
   "keywords": [],

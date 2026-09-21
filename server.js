@@ -8,6 +8,7 @@ const {
     calculateGrowth
 } = require("./lib/history");
 const { createHistoryStore } = require("./lib/history-store");
+const { createConfigStore } = require("./lib/config-store");
 require("dotenv").config();
 
 const app = express();
@@ -16,6 +17,9 @@ const HISTORY_DAYS = 30;
 
 const dataDirectory = path.join(__dirname, "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
+const configStore = createConfigStore({
+    filePath: path.join(dataDirectory, "config.json")
+});
 
 const db = new Database(path.join(dataDirectory, "analytics.db"));
 const historyStore = createHistoryStore(db);
@@ -45,14 +49,15 @@ function recordChannelSnapshot(channel) {
     historyStore.deleteBefore(utcDateKey(-HISTORY_DAYS, now));
 }
 
-const youtube = google.youtube({
-    version: "v3",
-    auth: process.env.YOUTUBE_API_KEY
-});
+function getYoutubeClient() {
+    const { youtubeApiKey } = configStore.read();
+    return google.youtube({ version: "v3", auth: youtubeApiKey });
+}
 
+app.use(express.json());
 app.use(express.static("public"));
 
-app.get(["/", "/vid-data", "/top-vids", "/alerts", "/system", "/help"], (req, res) => {
+app.get(["/", "/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config"], (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
@@ -64,11 +69,34 @@ app.get("/subs", (req, res) => {
 // CHANNEL STATISTICS
 // ================================
 
+app.get("/api/config", (req, res) => {
+    res.json(configStore.public());
+});
+
+app.put("/api/config", (req, res) => {
+    const values = req.body || {};
+    if (
+        (values.youtubeApiKey !== undefined && typeof values.youtubeApiKey !== "string") ||
+        (values.youtubeChannelId !== undefined && typeof values.youtubeChannelId !== "string")
+    ) {
+        return res.status(400).json({ error: "Ongeldige configuratie" });
+    }
+
+    try {
+        configStore.update(values);
+        res.json(configStore.public());
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Configuratie kon niet worden opgeslagen" });
+    }
+});
+
 app.get("/api/channel", async (req, res) => {
     try {
-        const response = await youtube.channels.list({
+        const { youtubeChannelId } = configStore.read();
+        const response = await getYoutubeClient().channels.list({
             part: "snippet,statistics",
-            id: process.env.YOUTUBE_CHANNEL_ID
+            id: youtubeChannelId
         });
 
         if (!response.data.items || response.data.items.length === 0) {
@@ -125,6 +153,7 @@ app.get("/api/history", (req, res) => {
 app.get("/api/system", (req, res) => {
     try {
         const history = historyStore.findFrom(utcDateKey(-(HISTORY_DAYS - 1)));
+        const config = configStore.read();
         res.json({
             status: "online",
             uptimeSeconds: Math.floor(process.uptime()),
@@ -132,7 +161,7 @@ app.get("/api/system", (req, res) => {
             historySnapshots: history.length,
             oldestSnapshot: history[0]?.date || null,
             latestSnapshot: history[history.length - 1]?.date || null,
-            youtubeApiConfigured: Boolean(process.env.YOUTUBE_API_KEY && process.env.YOUTUBE_CHANNEL_ID),
+            youtubeApiConfigured: Boolean(config.youtubeApiKey && config.youtubeChannelId),
             serverTime: new Date().toISOString()
         });
     } catch (error) {
@@ -147,9 +176,11 @@ app.get("/api/system", (req, res) => {
 
 app.get("/api/videos", async (req, res) => {
     try {
+        const { youtubeChannelId } = configStore.read();
+        const youtube = getYoutubeClient();
         const channelResponse = await youtube.channels.list({
             part: "contentDetails",
-            id: process.env.YOUTUBE_CHANNEL_ID
+            id: youtubeChannelId
         });
 
         if (!channelResponse.data.items.length) {
