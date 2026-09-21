@@ -17,6 +17,7 @@
         --panel-bright: #0b160d;
         --border: #0d4d25;
         --amber: #b6ff72;
+        --channel-slug: "xavis";
       }
 
       * {
@@ -185,7 +186,7 @@
       }
 
       .terminal-label::before {
-        content: "root@xavis:~$ ";
+        content: "root@" var(--channel-slug) ":~$ ";
         color: var(--green);
       }
 
@@ -590,9 +591,9 @@
         <button id="closeTab" class="terminal-close" type="button" aria-label="Close tab" title="Close tab"></button>
         <span class="terminal-dot"></span>
         <span class="terminal-dot"></span>
-        <span class="terminal-path">/usr/local/xavis-analytics/<input id="dashboardName" class="terminal-dashboard-input" value="dashboard" aria-label="Dashboard name" spellcheck="false" /></span>
+        <span class="terminal-path">/usr/local/<span id="channelPath">xavis-analytics</span>/<input id="dashboardName" class="terminal-dashboard-input" value="dashboard" aria-label="Dashboard name" spellcheck="false" /></span>
       </div>
-      <div class="terminal-title">XAVIS ANALYTICS</div>
+      <div class="terminal-title"><span id="brandName">XAVIS</span> ANALYTICS</div>
 
       <div class="subtitle">YouTube Statistics Monitoring System</div>
     </header>
@@ -719,8 +720,18 @@
             throw new Error(data.error);
           }
 
+          const channelDisplayName = data.name || "Xavis";
+          const channelSlug = channelDisplayName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "") || "channel";
+          document.getElementById("brandName").textContent = channelDisplayName.toUpperCase();
+          document.getElementById("channelPath").textContent = channelSlug;
+          document.documentElement.style.setProperty("--channel-slug", JSON.stringify(channelSlug));
+          document.title = `${channelDisplayName} Analytics`;
+
           document.getElementById("channelName").textContent =
-            data.name.toUpperCase();
+            channelDisplayName.toUpperCase();
 
           document.getElementById("channelDescription").textContent =
             data.description;
