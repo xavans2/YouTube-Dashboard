@@ -1292,11 +1292,30 @@
           }, 250);
         } catch (error) {
           console.error(error);
-          const failed = document.createElement("div");
-          failed.textContent = "ERROR: unable to start node server.js";
-          output.appendChild(failed);
-          input.disabled = false;
-          input.focus();
+          try {
+            const configResponse = await fetch("/api/config");
+            const configData = await configResponse.json();
+            if (!configResponse.ok) throw new Error(configData.error);
+            const compatible = document.createElement("div");
+            compatible.textContent =
+              "node server.js is already running in the background.";
+            output.appendChild(compatible);
+            window.setTimeout(() => {
+              window.location.assign(
+                configData.youtubeApiKeyConfigured && configData.youtubeChannelId
+                  ? "/dashboard"
+                  : "/config",
+              );
+            }, 250);
+          } catch (fallbackError) {
+            console.error(fallbackError);
+            const failed = document.createElement("div");
+            failed.textContent =
+              "ERROR: node server.js is not reachable. Start it once with: node server.js";
+            output.appendChild(failed);
+            input.disabled = false;
+            input.focus();
+          }
         }
       }
 
