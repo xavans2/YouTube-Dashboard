@@ -1236,13 +1236,16 @@
       }
 
       function closeTab() {
-        window.close();
+        if (typeof window.close === "function") {
+          window.close();
+        }
 
-        // Browsers block window.close() for tabs not opened by JavaScript.
-        // Give the user a useful fallback message in that case.
+        // A browser cannot close a user-opened tab from page JavaScript.
+        // Leave the app cleanly when the close request is blocked.
         window.setTimeout(() => {
-          document.getElementById("status").textContent =
-            "Tab close blocked by browser — use Ctrl+W (Windows/Linux) or ⌘W (Mac).";
+          if (!document.hidden && window.location.href !== "about:blank") {
+            window.location.replace("about:blank");
+          }
         }, 150);
       }
 
