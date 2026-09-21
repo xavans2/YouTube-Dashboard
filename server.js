@@ -7,6 +7,7 @@ const {
     buildHistoryWithCarryForward,
     calculateGrowth
 } = require("./lib/history");
+const { createHistoryStore } = require("./lib/history-store");
 require("dotenv").config();
 
 const app = express();
@@ -17,57 +18,31 @@ const dataDirectory = path.join(__dirname, "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
 
 const db = new Database(path.join(dataDirectory, "analytics.db"));
-db.pragma("journal_mode = WAL");
-db.exec(`
-    CREATE TABLE IF NOT EXISTS channel_history (
-        snapshot_date TEXT PRIMARY KEY,
-        captured_at TEXT NOT NULL,
-        subscribers INTEGER NOT NULL,
-        views INTEGER NOT NULL,
-        videos INTEGER NOT NULL
-    )
-`);
+const historyStore = createHistoryStore(db);
 
-const saveSnapshot = db.prepare(`
-    INSERT INTO channel_history (
-        snapshot_date, captured_at, subscribers, views, videos
-    ) VALUES (@snapshotDate, @capturedAt, @subscribers, @views, @videos)
-    ON CONFLICT(snapshot_date) DO UPDATE SET
-        captured_at = excluded.captured_at,
-        subscribers = excluded.subscribers,
-        views = excluded.views,
-        videos = excluded.videos
-`);
-
-const pruneHistory = db.prepare(`
-    DELETE FROM channel_history
-    WHERE snapshot_date < date('now', ?)
-`);
-
-const historyQuery = db.prepare(`
-    SELECT snapshot_date AS date, captured_at AS capturedAt,
-           subscribers, views, videos
-    FROM channel_history
-    WHERE snapshot_date >= date('now', ?)
-    ORDER BY snapshot_date ASC
-`);
+function utcDateKey(offsetDays = 0, baseDate = new Date()) {
+    const date = new Date(baseDate);
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() + offsetDays);
+    return date.toISOString().slice(0, 10);
+}
 
 function getHistoryWithCarryForward() {
-    const snapshots = historyQuery.all(`-${HISTORY_DAYS} days`);
+    const snapshots = historyStore.findFrom(utcDateKey(-HISTORY_DAYS));
     return buildHistoryWithCarryForward(snapshots, HISTORY_DAYS);
 }
 
 function recordChannelSnapshot(channel) {
     const now = new Date();
-    saveSnapshot.run({
-        snapshotDate: now.toISOString().slice(0, 10),
+    historyStore.saveSnapshot({
+        snapshotDate: utcDateKey(0, now),
         capturedAt: now.toISOString(),
         subscribers: Number(channel.statistics.subscriberCount || 0),
         views: Number(channel.statistics.viewCount || 0),
         videos: Number(channel.statistics.videoCount || 0)
     });
 
-    pruneHistory.run(`-${HISTORY_DAYS} days`);
+    historyStore.deleteBefore(utcDateKey(-HISTORY_DAYS, now));
 }
 
 const youtube = google.youtube({
@@ -149,7 +124,7 @@ app.get("/api/history", (req, res) => {
 
 app.get("/api/system", (req, res) => {
     try {
-        const history = historyQuery.all(`-${HISTORY_DAYS - 1} days`);
+        const history = historyStore.findFrom(utcDateKey(-(HISTORY_DAYS - 1)));
         res.json({
             status: "online",
             uptimeSeconds: Math.floor(process.uptime()),
