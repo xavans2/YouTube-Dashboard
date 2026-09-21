@@ -9,6 +9,7 @@ const {
 } = require("./lib/history");
 const { createHistoryStore } = require("./lib/history-store");
 const { createConfigStore } = require("./lib/config-store");
+const { buildHealthStatus } = require("./lib/health");
 
 const app = express();
 const PORT = 3000;
@@ -73,6 +74,24 @@ app.get("/subs", (req, res) => {
 
 app.get("/api/config", (req, res) => {
     res.json(configStore.public());
+});
+
+app.get("/api/health", (req, res) => {
+    const dependencyErrors = [];
+    let history = [];
+    try {
+        history = historyStore.findFrom(utcDateKey(-(HISTORY_DAYS - 1)));
+    } catch (error) {
+        console.error(error);
+        dependencyErrors.push("database");
+    }
+
+    const health = buildHealthStatus({
+        config: configStore.read(),
+        latestSnapshot: history[history.length - 1]?.date || null,
+        dependencyErrors
+    });
+    res.status(health.httpStatus).json(health);
 });
 
 app.put("/api/config", (req, res) => {
@@ -160,6 +179,10 @@ app.get("/api/system", (req, res) => {
     try {
         const history = historyStore.findFrom(utcDateKey(-(HISTORY_DAYS - 1)));
         const config = configStore.read();
+        const health = buildHealthStatus({
+            config,
+            latestSnapshot: history[history.length - 1]?.date || null
+        });
         res.json({
             status: "online",
             uptimeSeconds: Math.floor(process.uptime()),
@@ -167,6 +190,9 @@ app.get("/api/system", (req, res) => {
             historySnapshots: history.length,
             oldestSnapshot: history[0]?.date || null,
             latestSnapshot: history[history.length - 1]?.date || null,
+            healthStatus: health.status,
+            historyFreshness: health.checks.history.status,
+            historyAgeDays: health.checks.history.ageDays,
             youtubeApiConfigured: Boolean(config.youtubeApiKey && config.youtubeChannelId),
             serverTime: new Date().toISOString()
         });

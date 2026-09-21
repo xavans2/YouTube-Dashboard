@@ -1073,9 +1073,11 @@
           const uptime = `${Math.floor(data.uptimeSeconds / 3600)}h ${Math.floor((data.uptimeSeconds % 3600) / 60)}m`;
           const values = [
             ["STATUS", data.status.toUpperCase()],
+            ["HEALTH", data.healthStatus.toUpperCase()],
             ["UPTIME", uptime],
             ["NODE", data.nodeVersion],
             ["HISTORY", `${data.historySnapshots} snapshots`],
+            ["FRESHNESS", data.historyFreshness],
             ["OLDEST SNAPSHOT", data.oldestSnapshot || "none"],
             [
               "YOUTUBE API",
