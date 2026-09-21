@@ -55,17 +55,14 @@ function getYoutubeClient() {
 app.use(express.json());
 app.use(express.static("public", { index: false }));
 
-app.get("/", (req, res) => {
-    if (!configStore.isComplete()) return res.redirect("/config");
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+app.get("/", (req, res) => res.redirect("/terminal"));
 
-app.get(["/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config"], (req, res) => {
+app.get(["/dashboard", "/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config", "/terminal"], (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.get("/subs", (req, res) => {
-    res.redirect("/");
+    res.redirect("/dashboard");
 });
 
 // ================================
@@ -74,6 +71,21 @@ app.get("/subs", (req, res) => {
 
 app.get("/api/config", (req, res) => {
     res.json(configStore.public());
+});
+
+app.post("/api/terminal/start", (req, res) => {
+    if (req.body?.command !== "/usr/local/system/start") {
+        return res.status(400).json({
+            error: "Unknown command. Use /usr/local/system/start."
+        });
+    }
+
+    res.json({
+        ok: true,
+        status: "already-running",
+        message: "node server.js is already running in the background.",
+        redirectPath: configStore.isComplete() ? "/dashboard" : "/config"
+    });
 });
 
 app.get("/api/health", (req, res) => {

@@ -558,6 +558,45 @@
         color: var(--black);
       }
 
+      .terminal-view {
+        min-height: 55vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 12px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.35);
+      }
+
+      .terminal-output {
+        display: grid;
+        gap: 8px;
+        color: var(--dim-green);
+        white-space: pre-wrap;
+      }
+
+      .terminal-prompt {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .terminal-prompt-label {
+        color: var(--green);
+        white-space: nowrap;
+      }
+
+      .terminal-command-input {
+        width: 100%;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--green);
+        font: inherit;
+      }
+
       .video:hover {
         border-color: var(--green);
 
@@ -727,6 +766,29 @@
       <div id="pageCommand" class="terminal-label">
         monitor --channel youtube --live
       </div>
+
+      <section id="terminalView" class="page-view" hidden>
+        <div class="section-title">SYSTEM TERMINAL</div>
+        <div class="terminal-view">
+          <div id="terminalOutput" class="terminal-output">
+            <div>XAVIS local system launcher</div>
+            <div>Type /usr/local/system/start to start the dashboard.</div>
+          </div>
+          <div class="terminal-prompt">
+            <span class="terminal-prompt-label">root@xavis:~$</span>
+            <input
+              id="terminalCommand"
+              class="terminal-command-input"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Terminal command"
+              autofocus
+            />
+          </div>
+        </div>
+      </section>
+
       <section id="dashboardView" class="page-view">
         <!-- CHANNEL -->
 
@@ -845,6 +907,7 @@
           <div class="help-command"><code>alerts</code><span>Scan recent channel signals and 30-day growth.</span></div>
           <div class="help-command"><code>system</code><span>Show server uptime, API configuration and history status.</span></div>
           <div class="help-command"><code>config</code><span>Edit local YouTube API settings without needing an .env file.</span></div>
+          <div class="help-command"><code>terminal</code><span>Open the local system launcher and start the background server.</span></div>
           <div class="help-command"><code>help</code><span>Show this command reference.</span></div>
         </div>
         <div class="data-panel" style="margin-top: 15px; color: var(--dim-green);">
@@ -1180,6 +1243,53 @@
         }
       }
 
+      async function runTerminalCommand() {
+        const input = document.getElementById("terminalCommand");
+        const output = document.getElementById("terminalOutput");
+        const command = input.value.trim();
+        if (!command) return;
+
+        const entered = document.createElement("div");
+        entered.textContent = `root@xavis:~$ ${command}`;
+        output.appendChild(entered);
+        input.value = "";
+
+        if (command !== "/usr/local/system/start") {
+          const error = document.createElement("div");
+          error.textContent = "ERROR: command not found";
+          output.appendChild(error);
+          input.focus();
+          return;
+        }
+
+        const starting = document.createElement("div");
+        starting.textContent = "Starting node server.js in background...";
+        output.appendChild(starting);
+        input.disabled = true;
+        try {
+          const response = await fetch("/api/terminal/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ command }),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+          const ready = document.createElement("div");
+          ready.textContent = data.message;
+          output.appendChild(ready);
+          window.setTimeout(() => {
+            window.location.assign(data.redirectPath);
+          }, 250);
+        } catch (error) {
+          console.error(error);
+          const failed = document.createElement("div");
+          failed.textContent = "ERROR: unable to start node server.js";
+          output.appendChild(failed);
+          input.disabled = false;
+          input.focus();
+        }
+      }
+
       function formatGrowth(growth) {
         if (growth.value === null) return "---";
         return `${growth.value >= 0 ? "+" : ""}${formatNumber(growth.value)}`;
@@ -1338,6 +1448,7 @@
         const isSystemPage = pageName === "system";
         const isHelpPage = pageName === "help";
         const isConfigPage = pageName === "config";
+        const isTerminalPage = pageName === "terminal";
         const currentPage = isVideoPage
           ? "vid-data"
           : isTopVideosPage
@@ -1350,9 +1461,12 @@
                   ? "help"
                   : isConfigPage
                     ? "config"
+                    : isTerminalPage
+                      ? "terminal"
                 : "dashboard";
         document.getElementById("dashboardView").hidden =
-          isVideoPage || isTopVideosPage || isAlertsPage || isSystemPage || isHelpPage || isConfigPage;
+          isVideoPage || isTopVideosPage || isAlertsPage || isSystemPage || isHelpPage || isConfigPage || isTerminalPage;
+        document.getElementById("terminalView").hidden = !isTerminalPage;
         document.getElementById("videoView").hidden = !isVideoPage;
         document.getElementById("topVideosView").hidden = !isTopVideosPage;
         document.getElementById("alertsView").hidden = !isAlertsPage;
@@ -1371,6 +1485,8 @@
                   ? "help --commands"
                   : isConfigPage
                     ? "config --local"
+                    : isTerminalPage
+                      ? "terminal --launcher"
                 : "monitor --channel youtube --live";
         dashboardName.value = currentPage;
         resizeDashboardName();
@@ -1383,7 +1499,7 @@
           window.history.pushState(
             {},
             "",
-            currentPage === "dashboard" ? "/" : `/${currentPage}`,
+            currentPage === "dashboard" ? "/dashboard" : `/${currentPage}`,
           );
         }
 
@@ -1395,6 +1511,8 @@
           loadSystem();
         } else if (isConfigPage) {
           loadConfig();
+        } else if (isTerminalPage) {
+          document.getElementById("terminalCommand").focus();
         }
       }
 
@@ -1414,7 +1532,7 @@
           event.preventDefault();
           const requestedPage = dashboardName.value.toLowerCase();
           if (
-            ["vid-data", "dashboard", "top-vids", "alerts", "system", "help", "config"].includes(
+            ["vid-data", "dashboard", "top-vids", "alerts", "system", "help", "config", "terminal"].includes(
               requestedPage,
             )
           ) {
@@ -1426,21 +1544,26 @@
 
       document.getElementById("saveConfig").addEventListener("click", saveConfig);
       document.getElementById("resetConfig").addEventListener("click", resetConfig);
+      document
+        .getElementById("terminalCommand")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") runTerminalCommand();
+        });
 
       window.addEventListener("popstate", () => {
         const path = window.location.pathname;
-        showPage(path.slice(1) || "dashboard", false);
+        showPage(path.slice(1) || "terminal", false);
       });
 
       const initialPath = window.location.pathname;
-      showPage(initialPath.slice(1) || "dashboard", false);
+      showPage(initialPath.slice(1) || "terminal", false);
 
       /* ================================
        LOAD EVERYTHING
     ================================= */
 
       async function loadAll() {
-        if (window.location.pathname === "/config") {
+        if (["/config", "/terminal"].includes(window.location.pathname)) {
           document.getElementById("status").textContent =
             "Configuration required before loading YouTube data.";
           return;
