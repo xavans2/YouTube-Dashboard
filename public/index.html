@@ -872,6 +872,9 @@
           <button id="saveConfig" class="config-button" type="button">
             Save local configuration
           </button>
+          <button id="resetConfig" class="config-button" type="button">
+            Clear configuration
+          </button>
           <div id="configMessage" class="config-hint"></div>
         </div>
         <div class="data-panel config-hint" style="margin-top: 15px;">
@@ -1147,6 +1150,34 @@
         }
       }
 
+      async function resetConfig() {
+        const button = document.getElementById("resetConfig");
+        const message = document.getElementById("configMessage");
+        button.disabled = true;
+        message.textContent = "Clearing local configuration...";
+        try {
+          const response = await fetch("/api/config", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reset: true }),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+          document.getElementById("configApiKey").value = "";
+          document.getElementById("configChannelId").value = "";
+          document.getElementById("configApiKeyStatus").textContent =
+            "No API key configured yet.";
+          message.textContent =
+            "Configuration cleared. Enter new values to reconnect.";
+          showPage("config", false);
+        } catch (error) {
+          console.error(error);
+          message.textContent = "ERROR: Unable to clear configuration.";
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       function formatGrowth(growth) {
         if (growth.value === null) return "---";
         return `${growth.value >= 0 ? "+" : ""}${formatNumber(growth.value)}`;
@@ -1392,6 +1423,7 @@
       });
 
       document.getElementById("saveConfig").addEventListener("click", saveConfig);
+      document.getElementById("resetConfig").addEventListener("click", resetConfig);
 
       window.addEventListener("popstate", () => {
         const path = window.location.pathname;
@@ -1406,6 +1438,11 @@
     ================================= */
 
       async function loadAll() {
+        if (window.location.pathname === "/config") {
+          document.getElementById("status").textContent =
+            "Configuration required before loading YouTube data.";
+          return;
+        }
         await Promise.all([loadChannel(), loadVideos()]);
         await loadHistory();
 

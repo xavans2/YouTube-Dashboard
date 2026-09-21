@@ -19,6 +19,7 @@ test("uses environment values as defaults and masks the API key", () => {
         youtubeApiKey: "env-secret-key",
         youtubeChannelId: "env-channel"
     });
+    assert.equal(store.isComplete(), true);
     assert.equal(maskSecret("env-secret-key"), "en*********ey");
     assert.equal(store.public().youtubeApiKey, "en*********ey");
     db.close();
@@ -47,5 +48,11 @@ test("persists local overrides without exposing the API key", () => {
         ]
     );
     assert.equal(store.public().youtubeApiKey, "lo*********ey");
+    store.reset();
+    assert.equal(createConfigStore({ db }).isComplete(), false);
+    assert.deepEqual(store.read(), {
+        youtubeApiKey: "env-secret-key",
+        youtubeChannelId: "env-channel"
+    });
     db.close();
 });

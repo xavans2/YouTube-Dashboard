@@ -52,9 +52,14 @@ function getYoutubeClient() {
 }
 
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static("public", { index: false }));
 
-app.get(["/", "/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config"], (req, res) => {
+app.get("/", (req, res) => {
+    if (!configStore.isComplete()) return res.redirect("/config");
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.get(["/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config"], (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
@@ -72,6 +77,10 @@ app.get("/api/config", (req, res) => {
 
 app.put("/api/config", (req, res) => {
     const values = req.body || {};
+    if (values.reset === true) {
+        configStore.reset();
+        return res.json(configStore.public());
+    }
     if (
         (values.youtubeApiKey !== undefined && typeof values.youtubeApiKey !== "string") ||
         (values.youtubeChannelId !== undefined && typeof values.youtubeChannelId !== "string")
