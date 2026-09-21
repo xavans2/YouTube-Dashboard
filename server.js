@@ -114,7 +114,7 @@ const youtube = google.youtube({
 
 app.use(express.static("public"));
 
-app.get(["/", "/vid-data", "/top-vids", "/alerts", "/system"], (req, res) => {
+app.get(["/", "/vid-data", "/top-vids", "/alerts", "/system", "/help"], (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 

@@ -459,6 +459,29 @@
         font-weight: bold;
       }
 
+      .help-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .help-command {
+        display: grid;
+        grid-template-columns: minmax(110px, 180px) 1fr;
+        gap: 16px;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+      }
+
+      .help-command code {
+        color: var(--green);
+        font-weight: bold;
+      }
+
+      .help-command span {
+        color: var(--dim-green);
+      }
+
       .video:hover {
         border-color: var(--green);
 
@@ -569,6 +592,11 @@
           grid-template-columns: 1fr;
         }
 
+        .help-command {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+
         .channel {
           align-items: flex-start;
         }
@@ -588,94 +616,126 @@
   <body>
     <header>
       <div class="terminal-bar">
-        <button id="closeTab" class="terminal-close" type="button" aria-label="Close tab" title="Close tab"></button>
+        <button
+          id="closeTab"
+          class="terminal-close"
+          type="button"
+          aria-label="Close tab"
+          title="Close tab"
+        ></button>
         <span class="terminal-dot"></span>
         <span class="terminal-dot"></span>
-        <span class="terminal-path">/usr/local/<span id="channelPath">xavis-analytics</span>/<input id="dashboardName" class="terminal-dashboard-input" value="dashboard" aria-label="Dashboard name" spellcheck="false" /></span>
+        <span class="terminal-path"
+          >/usr/local/<span id="channelPath">xavis-analytics</span>/<input
+            id="dashboardName"
+            class="terminal-dashboard-input"
+            value="dashboard"
+            aria-label="Dashboard name"
+            spellcheck="false"
+        /></span>
       </div>
-      <div class="terminal-title"><span id="brandName">XAVIS</span> ANALYTICS</div>
+      <div class="terminal-title">
+        <span id="brandName">XAVIS</span> ANALYTICS
+      </div>
 
       <div class="subtitle">YouTube Statistics Monitoring System</div>
     </header>
 
     <main>
-      <div id="pageCommand" class="terminal-label">monitor --channel youtube --live</div>
+      <div id="pageCommand" class="terminal-label">
+        monitor --channel youtube --live
+      </div>
       <section id="dashboardView" class="page-view">
-      <!-- CHANNEL -->
+        <!-- CHANNEL -->
 
-      <div class="channel">
-        <img id="channelThumbnail" src="" alt="Kanaal" />
+        <div class="channel">
+          <img id="channelThumbnail" src="" alt="Kanaal" />
 
-        <div>
-          <h2 id="channelName">LOADING...</h2>
+          <div>
+            <h2 id="channelName">LOADING...</h2>
 
-          <p id="channelDescription"></p>
-        </div>
-      </div>
-
-      <!-- STATISTICS -->
-
-      <div class="stats">
-        <div class="card">
-          <h3>Subscribers</h3>
-
-          <div class="value" id="subscribers">---</div>
+            <p id="channelDescription"></p>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>Total Views</h3>
+        <!-- STATISTICS -->
 
-          <div class="value" id="views">---</div>
+        <div class="stats">
+          <div class="card">
+            <h3>Subscribers</h3>
+
+            <div class="value" id="subscribers">---</div>
+          </div>
+
+          <div class="card">
+            <h3>Total Views</h3>
+
+            <div class="value" id="views">---</div>
+          </div>
+
+          <div class="card">
+            <h3>Videos</h3>
+
+            <div class="value" id="videos">---</div>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>Videos</h3>
+        <!-- 30-DAY HISTORY -->
 
-          <div class="value" id="videos">---</div>
+        <div class="section-title">30-DAY GROWTH</div>
+
+        <div class="growth-grid">
+          <div class="growth-card">
+            <h3>Subscribers</h3>
+            <div class="growth-value" id="subscriberGrowth">---</div>
+            <div class="growth-percent" id="subscriberGrowthPercent">
+              Waiting for history...
+            </div>
+          </div>
+          <div class="growth-card">
+            <h3>Total Views</h3>
+            <div class="growth-value" id="viewGrowth">---</div>
+            <div class="growth-percent" id="viewGrowthPercent">
+              Waiting for history...
+            </div>
+          </div>
+          <div class="growth-card">
+            <h3>Videos</h3>
+            <div class="growth-value" id="videoGrowth">---</div>
+            <div class="growth-percent" id="videoGrowthPercent">
+              Waiting for history...
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- 30-DAY HISTORY -->
-
-      <div class="section-title">30-DAY GROWTH</div>
-
-      <div class="growth-grid">
-        <div class="growth-card">
-          <h3>Subscribers</h3>
-          <div class="growth-value" id="subscriberGrowth">---</div>
-          <div class="growth-percent" id="subscriberGrowthPercent">Waiting for history...</div>
+        <div class="growth-chart">
+          <svg
+            id="historyChart"
+            viewBox="0 0 800 220"
+            role="img"
+            aria-label="30-day views history"
+          ></svg>
+          <div id="historyEmpty" class="history-empty">
+            The chart will fill as daily snapshots are collected.
+          </div>
         </div>
-        <div class="growth-card">
-          <h3>Total Views</h3>
-          <div class="growth-value" id="viewGrowth">---</div>
-          <div class="growth-percent" id="viewGrowthPercent">Waiting for history...</div>
-        </div>
-        <div class="growth-card">
-          <h3>Videos</h3>
-          <div class="growth-value" id="videoGrowth">---</div>
-          <div class="growth-percent" id="videoGrowthPercent">Waiting for history...</div>
-        </div>
-      </div>
-
-      <div class="growth-chart">
-        <svg id="historyChart" viewBox="0 0 800 220" role="img" aria-label="30-day views history"></svg>
-        <div id="historyEmpty" class="history-empty">The chart will fill as daily snapshots are collected.</div>
-      </div>
       </section>
 
       <!-- VIDEO MONITOR -->
 
       <section id="videoView" class="page-view" hidden>
-      <div class="section-title">VIDEO DATA</div>
+        <div class="section-title">VIDEO DATA</div>
 
-      <div id="videoList" class="videos">
-        <div class="video-meta">Loading video data...</div>
-      </div>
+        <div id="videoList" class="videos">
+          <div class="video-meta">Loading video data...</div>
+        </div>
       </section>
 
       <section id="topVideosView" class="page-view" hidden>
         <div class="section-title">TOP VIDEOS</div>
-        <div id="topVideoMessage" class="history-empty">Loading video rankings...</div>
+        <div id="topVideoMessage" class="history-empty">
+          Loading video rankings...
+        </div>
         <div id="topVideoList" class="videos"></div>
       </section>
 
@@ -688,8 +748,25 @@
 
       <section id="systemView" class="page-view" hidden>
         <div class="section-title">SYSTEM STATUS</div>
-        <div id="systemMessage" class="history-empty">Reading system status...</div>
+        <div id="systemMessage" class="history-empty">
+          Reading system status...
+        </div>
         <div id="systemGrid" class="system-grid"></div>
+      </section>
+
+      <section id="helpView" class="page-view" hidden>
+        <div class="section-title">COMMAND HELP</div>
+        <div class="help-list">
+          <div class="help-command"><code>dashboard</code><span>Open the main channel dashboard and 30-day growth view.</span></div>
+          <div class="help-command"><code>vid-data</code><span>Open the latest video monitor with views, likes and comments.</span></div>
+          <div class="help-command"><code>top-vids</code><span>Rank the current videos by total views.</span></div>
+          <div class="help-command"><code>alerts</code><span>Scan recent channel signals and 30-day growth.</span></div>
+          <div class="help-command"><code>system</code><span>Show server uptime, API configuration and history status.</span></div>
+          <div class="help-command"><code>help</code><span>Show this command reference.</span></div>
+        </div>
+        <div class="data-panel" style="margin-top: 15px; color: var(--dim-green);">
+          Type a command in the path bar above and press <code style="color: var(--green);">Enter</code>. Use <code style="color: var(--green);">dashboard</code> to return home.
+        </div>
       </section>
 
       <!-- STATUS -->
@@ -721,13 +798,18 @@
           }
 
           const channelDisplayName = data.name || "Xavis";
-          const channelSlug = channelDisplayName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "") || "channel";
-          document.getElementById("brandName").textContent = channelDisplayName.toUpperCase();
+          const channelSlug =
+            channelDisplayName
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, "") || "channel";
+          document.getElementById("brandName").textContent =
+            channelDisplayName.toUpperCase();
           document.getElementById("channelPath").textContent = channelSlug;
-          document.documentElement.style.setProperty("--channel-slug", JSON.stringify(channelSlug));
+          document.documentElement.style.setProperty(
+            "--channel-slug",
+            JSON.stringify(channelSlug),
+          );
           document.title = `${channelDisplayName} Analytics`;
 
           document.getElementById("channelName").textContent =
@@ -765,7 +847,8 @@
         container.innerHTML = "";
 
         if (videos.length === 0) {
-          container.innerHTML = '<div class="video-meta">No videos found.</div>';
+          container.innerHTML =
+            '<div class="video-meta">No videos found.</div>';
           return;
         }
 
@@ -799,10 +882,14 @@
 
       async function loadVideos() {
         try {
-          renderVideoCards(document.getElementById("videoList"), await fetchVideos());
+          renderVideoCards(
+            document.getElementById("videoList"),
+            await fetchVideos(),
+          );
         } catch (error) {
           console.error(error);
-          document.getElementById("videoList").innerHTML = '<div class="video-meta">ERROR: Unable to retrieve video data.</div>';
+          document.getElementById("videoList").innerHTML =
+            '<div class="video-meta">ERROR: Unable to retrieve video data.</div>';
         }
       }
 
@@ -825,7 +912,7 @@
         try {
           const [historyResponse, videos] = await Promise.all([
             fetch("/api/history").then((response) => response.json()),
-            fetchVideos()
+            fetchVideos(),
           ]);
           const alerts = [];
           const growth = historyResponse.growth?.views;
@@ -833,15 +920,20 @@
           if (growth?.value !== null && growth?.value !== undefined) {
             alerts.push({
               type: growth.value < 0 ? "warning" : "ok",
-              text: `30-day views growth: ${formatGrowth(growth)} (${formatGrowthPercent(growth)})`
+              text: `30-day views growth: ${formatGrowth(growth)} (${formatGrowthPercent(growth)})`,
             });
           } else {
-            alerts.push({ type: "warning", text: "Not enough daily history for a 30-day growth alert." });
+            alerts.push({
+              type: "warning",
+              text: "Not enough daily history for a 30-day growth alert.",
+            });
           }
 
           alerts.push({
             type: videos.length ? "ok" : "warning",
-            text: videos.length ? `${videos.length} recent videos available for monitoring.` : "No videos found in the current feed."
+            text: videos.length
+              ? `${videos.length} recent videos available for monitoring.`
+              : "No videos found in the current feed.",
           });
 
           alerts.forEach((alert) => {
@@ -852,7 +944,8 @@
           });
         } catch (error) {
           console.error(error);
-          container.innerHTML = '<div class="alert-item warning">ERROR: Unable to scan channel alerts.</div>';
+          container.innerHTML =
+            '<div class="alert-item warning">ERROR: Unable to scan channel alerts.</div>';
         }
       }
 
@@ -871,14 +964,21 @@
             ["NODE", data.nodeVersion],
             ["HISTORY", `${data.historySnapshots} snapshots`],
             ["OLDEST SNAPSHOT", data.oldestSnapshot || "none"],
-            ["YOUTUBE API", data.youtubeApiConfigured ? "configured" : "missing"]
+            [
+              "YOUTUBE API",
+              data.youtubeApiConfigured ? "configured" : "missing",
+            ],
           ];
-          container.innerHTML = values.map(([label, value]) => `
+          container.innerHTML = values
+            .map(
+              ([label, value]) => `
             <div class="system-card">
               <h3>${label}</h3>
               <div class="system-value">${escapeHtml(String(value))}</div>
             </div>
-          `).join("");
+          `,
+            )
+            .join("");
         } catch (error) {
           console.error(error);
           message.textContent = "ERROR: Unable to retrieve system status.";
@@ -891,7 +991,8 @@
       }
 
       function formatGrowthPercent(growth) {
-        if (growth.percentage === null) return "Need at least 2 daily snapshots";
+        if (growth.percentage === null)
+          return "Need at least 2 daily snapshots";
         return `${growth.percentage >= 0 ? "+" : ""}${growth.percentage.toFixed(1)}% vs first snapshot`;
       }
 
@@ -913,11 +1014,17 @@
         const min = Math.min(...values);
         const max = Math.max(...values);
         const range = max - min || 1;
-        const points = values.map((value, index) => {
-          const x = padding + (index / (values.length - 1)) * (width - padding * 2);
-          const y = height - padding - ((value - min) / range) * (height - padding * 2);
-          return `${x},${y}`;
-        }).join(" ");
+        const points = values
+          .map((value, index) => {
+            const x =
+              padding + (index / (values.length - 1)) * (width - padding * 2);
+            const y =
+              height -
+              padding -
+              ((value - min) / range) * (height - padding * 2);
+            return `${x},${y}`;
+          })
+          .join(" ");
 
         chart.innerHTML = `
           <polyline points="${points}" fill="none" stroke="var(--green)" stroke-width="3" />
@@ -936,17 +1043,21 @@
           const fields = [
             ["subscribers", "subscriberGrowth", "subscriberGrowthPercent"],
             ["views", "viewGrowth", "viewGrowthPercent"],
-            ["videos", "videoGrowth", "videoGrowthPercent"]
+            ["videos", "videoGrowth", "videoGrowthPercent"],
           ];
 
           fields.forEach(([field, valueId, percentId]) => {
-            document.getElementById(valueId).textContent = formatGrowth(data.growth[field]);
-            document.getElementById(percentId).textContent = formatGrowthPercent(data.growth[field]);
+            document.getElementById(valueId).textContent = formatGrowth(
+              data.growth[field],
+            );
+            document.getElementById(percentId).textContent =
+              formatGrowthPercent(data.growth[field]);
           });
           drawHistoryChart(data.history);
         } catch (error) {
           console.error(error);
-          document.getElementById("historyEmpty").textContent = "ERROR: Unable to retrieve history.";
+          document.getElementById("historyEmpty").textContent =
+            "ERROR: Unable to retrieve history.";
         }
       }
 
@@ -976,7 +1087,9 @@
       document.getElementById("closeTab").addEventListener("click", closeTab);
 
       const dashboardName = document.getElementById("dashboardName");
-      const savedDashboardName = window.localStorage.getItem("xavis-dashboard-name");
+      const savedDashboardName = window.localStorage.getItem(
+        "xavis-dashboard-name",
+      );
 
       function resizeDashboardName() {
         dashboardName.style.width = `${Math.max(7, dashboardName.value.length + 1)}ch`;
@@ -991,12 +1104,25 @@
         const isTopVideosPage = pageName === "top-vids";
         const isAlertsPage = pageName === "alerts";
         const isSystemPage = pageName === "system";
-        const currentPage = isVideoPage ? "vid-data" : isTopVideosPage ? "top-vids" : isAlertsPage ? "alerts" : isSystemPage ? "system" : "dashboard";
-        document.getElementById("dashboardView").hidden = isVideoPage || isTopVideosPage || isAlertsPage || isSystemPage;
+        const isHelpPage = pageName === "help";
+        const currentPage = isVideoPage
+          ? "vid-data"
+          : isTopVideosPage
+            ? "top-vids"
+            : isAlertsPage
+              ? "alerts"
+              : isSystemPage
+                ? "system"
+                : isHelpPage
+                  ? "help"
+                : "dashboard";
+        document.getElementById("dashboardView").hidden =
+          isVideoPage || isTopVideosPage || isAlertsPage || isSystemPage || isHelpPage;
         document.getElementById("videoView").hidden = !isVideoPage;
         document.getElementById("topVideosView").hidden = !isTopVideosPage;
         document.getElementById("alertsView").hidden = !isAlertsPage;
         document.getElementById("systemView").hidden = !isSystemPage;
+        document.getElementById("helpView").hidden = !isHelpPage;
         document.getElementById("pageCommand").textContent = isVideoPage
           ? "videos --all --live"
           : isTopVideosPage
@@ -1005,13 +1131,22 @@
               ? "alerts --scan --channel"
               : isSystemPage
                 ? "system --status"
+                : isHelpPage
+                  ? "help --commands"
                 : "monitor --channel youtube --live";
         dashboardName.value = currentPage;
         resizeDashboardName();
-        window.localStorage.setItem("xavis-dashboard-name", dashboardName.value);
+        window.localStorage.setItem(
+          "xavis-dashboard-name",
+          dashboardName.value,
+        );
 
         if (updateUrl) {
-          window.history.pushState({}, "", currentPage === "dashboard" ? "/" : `/${currentPage}`);
+          window.history.pushState(
+            {},
+            "",
+            currentPage === "dashboard" ? "/" : `/${currentPage}`,
+          );
         }
 
         if (isTopVideosPage) {
@@ -1027,7 +1162,10 @@
 
       dashboardName.addEventListener("input", () => {
         dashboardName.value = dashboardName.value.replace(/[\\/\s]/g, "");
-        window.localStorage.setItem("xavis-dashboard-name", dashboardName.value || "dashboard");
+        window.localStorage.setItem(
+          "xavis-dashboard-name",
+          dashboardName.value || "dashboard",
+        );
         resizeDashboardName();
       });
 
@@ -1035,7 +1173,11 @@
         if (event.key === "Enter") {
           event.preventDefault();
           const requestedPage = dashboardName.value.toLowerCase();
-          if (["vid-data", "dashboard", "top-vids", "alerts", "system"].includes(requestedPage)) {
+          if (
+            ["vid-data", "dashboard", "top-vids", "alerts", "system", "help"].includes(
+              requestedPage,
+            )
+          ) {
             showPage(requestedPage);
           }
           dashboardName.blur();
