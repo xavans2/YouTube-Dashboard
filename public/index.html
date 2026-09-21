@@ -88,8 +88,22 @@
         width: 8px;
         height: 8px;
         border-radius: 50%;
+        padding: 0;
+        border: 0;
         background: var(--dim-green);
         box-shadow: 0 0 7px var(--dim-green);
+      }
+
+      .terminal-dot.terminal-control {
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+
+      .terminal-dot.terminal-control:hover,
+      .terminal-dot.terminal-control:focus-visible {
+        outline: none;
+        transform: scale(1.35);
+        box-shadow: 0 0 12px var(--green);
       }
 
       .terminal-dot:first-child {
@@ -625,6 +639,13 @@
         ></button>
         <span class="terminal-dot"></span>
         <span class="terminal-dot"></span>
+        <button
+          id="fullscreenToggle"
+          class="terminal-dot terminal-control"
+          type="button"
+          aria-label="Enter fullscreen"
+          title="Enter fullscreen"
+        ></button>
         <span class="terminal-path"
           >/usr/local/<span id="channelPath">xavis-analytics</span>/<input
             id="dashboardName"
@@ -1085,6 +1106,39 @@
       }
 
       document.getElementById("closeTab").addEventListener("click", closeTab);
+
+      async function toggleFullscreen() {
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen();
+            return;
+          }
+
+          await document.documentElement.requestFullscreen();
+        } catch (error) {
+          console.error(error);
+          document.getElementById("status").textContent =
+            "Fullscreen is not available in this browser.";
+        }
+      }
+
+      function updateFullscreenControl() {
+        const fullscreenToggle = document.getElementById("fullscreenToggle");
+        const isFullscreen = Boolean(document.fullscreenElement);
+        fullscreenToggle.setAttribute(
+          "aria-label",
+          isFullscreen ? "Exit fullscreen" : "Enter fullscreen",
+        );
+        fullscreenToggle.title = isFullscreen
+          ? "Exit fullscreen"
+          : "Enter fullscreen";
+      }
+
+      document
+        .getElementById("fullscreenToggle")
+        .addEventListener("click", toggleFullscreen);
+      document.addEventListener("fullscreenchange", updateFullscreenControl);
+      updateFullscreenControl();
 
       const dashboardName = document.getElementById("dashboardName");
       const savedDashboardName = window.localStorage.getItem(
