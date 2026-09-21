@@ -3,6 +3,10 @@ const { google } = require("googleapis");
 const fs = require("fs");
 const path = require("path");
 const Database = require("better-sqlite3");
+const {
+    buildHistoryWithCarryForward,
+    calculateGrowth
+} = require("./lib/history");
 require("dotenv").config();
 
 const app = express();
@@ -50,35 +54,7 @@ const historyQuery = db.prepare(`
 
 function getHistoryWithCarryForward() {
     const snapshots = historyQuery.all(`-${HISTORY_DAYS} days`);
-    const snapshotsByDate = new Map(snapshots.map((snapshot) => [snapshot.date, snapshot]));
-    const history = [];
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const firstDate = new Date(today);
-    firstDate.setUTCDate(firstDate.getUTCDate() - (HISTORY_DAYS - 1));
-    const firstDateKey = firstDate.toISOString().slice(0, 10);
-    let previousSnapshot = snapshots.find((snapshot) => snapshot.date < firstDateKey) || null;
-
-    for (let offset = HISTORY_DAYS - 1; offset >= 0; offset -= 1) {
-        const date = new Date(today);
-        date.setUTCDate(date.getUTCDate() - offset);
-        const dateKey = date.toISOString().slice(0, 10);
-        const snapshot = snapshotsByDate.get(dateKey);
-
-        if (snapshot) {
-            previousSnapshot = snapshot;
-        }
-
-        if (previousSnapshot) {
-            history.push({
-                ...previousSnapshot,
-                date: dateKey,
-                carriedForward: !snapshot
-            });
-        }
-    }
-
-    return history;
+    return buildHistoryWithCarryForward(snapshots, HISTORY_DAYS);
 }
 
 function recordChannelSnapshot(channel) {
@@ -92,19 +68,6 @@ function recordChannelSnapshot(channel) {
     });
 
     pruneHistory.run(`-${HISTORY_DAYS} days`);
-}
-
-function getGrowth(history, field) {
-    if (history.length < 2) {
-        return { value: null, percentage: null };
-    }
-
-    const first = Number(history[0][field]);
-    const latest = Number(history[history.length - 1][field]);
-    return {
-        value: latest - first,
-        percentage: first === 0 ? null : ((latest - first) / first) * 100
-    };
 }
 
 const youtube = google.youtube({
@@ -173,9 +136,9 @@ app.get("/api/history", (req, res) => {
             days: HISTORY_DAYS,
             history,
             growth: {
-                subscribers: getGrowth(history, "subscribers"),
-                views: getGrowth(history, "views"),
-                videos: getGrowth(history, "videos")
+                subscribers: calculateGrowth(history, "subscribers"),
+                views: calculateGrowth(history, "views"),
+                videos: calculateGrowth(history, "videos")
             }
         });
     } catch (error) {
