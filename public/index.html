@@ -1123,6 +1123,7 @@
           }
 
           await document.documentElement.requestFullscreen();
+          document.getElementById("dashboardName").focus();
         } catch (error) {
           console.error(error);
           document.getElementById("status").textContent =
