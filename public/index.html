@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Xavis Analytics</title>
+
+    <style>
+      :root {
+        --green: #00ff66;
+        --dark-green: #00b84a;
+        --dim-green: #087a38;
+        --muted-green: #14582d;
+        --black: #050805;
+        --panel: #081008;
+        --panel-bright: #0b160d;
+        --border: #0d4d25;
+        --amber: #b6ff72;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 50% -10%, #0d2a16 0, transparent 45%),
+          var(--black);
+        color: var(--green);
+        font-family: "Courier New", Courier, monospace;
+        min-height: 100vh;
+        letter-spacing: 0.02em;
+      }
+
+      /* Terminal scanlines */
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(0, 255, 102, 0.025) 0px,
+          rgba(0, 255, 102, 0.025) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+
+        z-index: 10;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45));
+        z-index: 11;
+      }
+
+      /* HEADER */
+
+      header {
+        border-bottom: 1px solid var(--green);
+        padding: 0 30px 25px;
+        background: rgba(3, 6, 3, 0.94);
+        box-shadow: 0 0 18px rgba(0, 255, 102, 0.08);
+      }
+
+      .terminal-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: 0 -30px 24px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        background: #020402;
+        color: var(--dim-green);
+        font-size: 12px;
+      }
+
+      .terminal-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--dim-green);
+        box-shadow: 0 0 7px var(--dim-green);
+      }
+
+      .terminal-dot:first-child {
+        background: var(--green);
+      }
+
+      .terminal-path {
+        margin-left: 8px;
+        color: var(--muted-green);
+      }
+
+      .terminal-dashboard-input {
+        width: 78px;
+        min-width: 20px;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--muted-green);
+        font: inherit;
+        letter-spacing: inherit;
+      }
+
+      .terminal-dashboard-input:focus {
+        color: var(--green);
+        text-shadow: 0 0 6px rgba(0, 255, 102, 0.7);
+      }
+
+      .terminal-close {
+        width: 14px;
+        height: 14px;
+        padding: 0;
+        border-radius: 50%;
+        border: 0;
+        background: var(--green);
+        color: var(--black);
+        cursor: pointer;
+        font: 0/0 "Courier New", Courier, monospace;
+        text-align: center;
+        box-shadow: 0 0 7px rgba(0, 255, 102, 0.6);
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+
+      .terminal-close:hover,
+      .terminal-close:focus-visible {
+        outline: none;
+        transform: scale(1.15);
+        box-shadow: 0 0 13px rgba(0, 255, 102, 0.9);
+      }
+      }
+
+      .terminal-title {
+        font-size: clamp(22px, 4vw, 32px);
+        font-weight: bold;
+
+        text-shadow: 0 0 8px rgba(0, 255, 102, 0.7);
+      }
+
+      .terminal-title::before {
+        content: "> ";
+        color: var(--dark-green);
+      }
+
+      .subtitle {
+        margin-top: 8px;
+        color: var(--dim-green);
+        font-size: 14px;
+      }
+
+      .subtitle::after {
+        content: "_";
+        margin-left: 4px;
+        color: var(--green);
+        animation: blink 1s steps(2, start) infinite;
+      }
+
+      @keyframes blink {
+        50% { opacity: 0; }
+      }
+
+      /* MAIN */
+
+      main {
+        max-width: 1100px;
+        margin: auto;
+        padding: 30px;
+      }
+
+      .terminal-label {
+        margin-bottom: 12px;
+        color: var(--dim-green);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .terminal-label::before {
+        content: "root@xavis:~$ ";
+        color: var(--green);
+      }
+
+      /* CHANNEL */
+
+      .channel {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+
+        padding: 20px;
+
+        border: 1px solid var(--green);
+        background: linear-gradient(135deg, var(--panel-bright), var(--panel));
+
+        margin-bottom: 25px;
+        box-shadow: inset 0 0 24px rgba(0, 255, 102, 0.035), 0 0 14px rgba(0, 255, 102, 0.04);
+      }
+
+      .channel img {
+        width: 75px;
+        height: 75px;
+
+        border: 1px solid var(--green);
+
+        object-fit: cover;
+      }
+
+      .channel h2 {
+        margin: 0;
+
+        font-size: 24px;
+
+        text-shadow: 0 0 6px rgba(0, 255, 102, 0.5);
+      }
+
+      .channel h2::before {
+        content: "CHANNEL: ";
+
+        color: var(--dim-green);
+        font-size: 14px;
+      }
+
+      .channel p {
+        color: var(--dim-green);
+        margin-bottom: 0;
+        max-width: 700px;
+      }
+
+      /* STAT CARDS */
+
+      .stats {
+        display: grid;
+
+        grid-template-columns: repeat(3, 1fr);
+
+        gap: 15px;
+      }
+
+      .growth-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+      }
+
+      .growth-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        padding: 18px;
+      }
+
+      .growth-card h3 {
+        margin: 0 0 10px;
+        color: var(--dark-green);
+        font-size: 13px;
+        text-transform: uppercase;
+      }
+
+      .growth-value {
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      .growth-percent {
+        margin-top: 6px;
+        color: var(--dark-green);
+        font-size: 13px;
+      }
+
+      .growth-chart {
+        margin-top: 15px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+      }
+
+      #historyChart {
+        display: block;
+        width: 100%;
+        height: 220px;
+      }
+
+      .history-empty {
+        color: var(--dim-green);
+        font-size: 13px;
+      }
+
+      .page-view[hidden] {
+        display: none;
+      }
+
+      .card {
+        background: var(--panel);
+
+        border: 1px solid var(--border);
+
+        padding: 22px;
+
+        position: relative;
+        box-shadow: inset 0 0 18px rgba(0, 255, 102, 0.025);
+      }
+
+      .card:hover,
+      .growth-card:hover,
+      .growth-chart:hover {
+        border-color: var(--dark-green);
+        box-shadow: 0 0 14px rgba(0, 255, 102, 0.12);
+      }
+
+      .card::before {
+        content: "┌─";
+
+        position: absolute;
+
+        top: -1px;
+        left: -1px;
+
+        color: var(--green);
+      }
+
+      .card::after {
+        content: "─┘";
+
+        position: absolute;
+
+        bottom: -1px;
+        right: -1px;
+
+        color: var(--green);
+      }
+
+      .card h3 {
+        margin: 0 0 12px;
+
+        color: var(--dark-green);
+
+        font-size: 14px;
+
+        text-transform: uppercase;
+      }
+
+      .card h3::before {
+        content: "$ ";
+
+        color: var(--green);
+      }
+
+      .value {
+        font-size: 32px;
+
+        font-weight: bold;
+
+        text-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
+      }
+
+      /* SECTION TITLES */
+
+      .section-title {
+        margin-top: 35px;
+        margin-bottom: 15px;
+
+        font-size: 18px;
+
+        color: var(--green);
+
+        text-shadow: 0 0 6px rgba(0, 255, 102, 0.5);
+        border-bottom: 1px dashed var(--muted-green);
+        padding-bottom: 8px;
+      }
+
+      .section-title::before {
+        content: "> ";
+
+        color: var(--dark-green);
+      }
+
+      /* VIDEOS */
+
+      .videos {
+        display: grid;
+
+        gap: 12px;
+      }
+
+      .video {
+        display: flex;
+
+        gap: 18px;
+
+        padding: 14px;
+
+        border: 1px solid var(--border);
+
+        background: var(--panel);
+        border-left: 3px solid var(--dim-green);
+
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+
+      .data-panel,
+      .system-card,
+      .alert-item {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      .data-panel + .data-panel,
+      .alert-item + .alert-item {
+        margin-top: 10px;
+      }
+
+      .alert-item {
+        border-left: 3px solid var(--dark-green);
+      }
+
+      .alert-item.warning {
+        border-left-color: var(--amber);
+        color: var(--amber);
+      }
+
+      .alert-item.ok {
+        border-left-color: var(--green);
+      }
+
+      .alert-label {
+        color: var(--dim-green);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .system-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .system-card h3 {
+        margin: 0 0 8px;
+        color: var(--dim-green);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .system-card .system-value {
+        color: var(--green);
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+      .video:hover {
+        border-color: var(--green);
+
+        box-shadow: 0 0 12px rgba(0, 255, 102, 0.15);
+      }
+
+      .video img {
+        width: 180px;
+        height: 101px;
+
+        object-fit: cover;
+
+        border: 1px solid var(--border);
+
+        flex-shrink: 0;
+      }
+
+      .video-info {
+        min-width: 0;
+      }
+
+      .video-title {
+        font-size: 17px;
+
+        font-weight: bold;
+
+        margin-bottom: 10px;
+
+        color: var(--green);
+
+        word-break: break-word;
+      }
+
+      .video-meta {
+        color: var(--dim-green);
+
+        font-size: 13px;
+
+        line-height: 1.8;
+      }
+
+      .video-meta span {
+        color: var(--dark-green);
+      }
+
+      /* STATUS */
+
+      #status {
+        margin-top: 25px;
+
+        padding: 15px;
+
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--green);
+
+        background: #061006;
+
+        color: var(--dark-green);
+
+        font-size: 13px;
+        box-shadow: inset 0 0 16px rgba(0, 255, 102, 0.04);
+      }
+
+      #status::before {
+        content: "[SYSTEM] ";
+
+        color: var(--green);
+      }
+
+      #status::after {
+        content: " ▌";
+        color: var(--green);
+        animation: blink 1s steps(2, start) infinite;
+      }
+
+      /* MOBILE */
+
+      @media (max-width: 700px) {
+        header {
+          padding-left: 15px;
+          padding-right: 15px;
+        }
+
+        .terminal-bar {
+          margin-left: -15px;
+          margin-right: -15px;
+        }
+
+        .terminal-path {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        main {
+          padding: 15px;
+        }
+
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .growth-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .system-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .channel {
+          align-items: flex-start;
+        }
+
+        .video {
+          flex-direction: column;
+        }
+
+        .video img {
+          width: 100%;
+          height: auto;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="terminal-bar">
+        <button id="closeTab" class="terminal-close" type="button" aria-label="Close tab" title="Close tab"></button>
+        <span class="terminal-dot"></span>
+        <span class="terminal-dot"></span>
+        <span class="terminal-path">/usr/local/xavis-analytics/<input id="dashboardName" class="terminal-dashboard-input" value="dashboard" aria-label="Dashboard name" spellcheck="false" /></span>
+      </div>
+      <div class="terminal-title">XAVIS ANALYTICS</div>
+
+      <div class="subtitle">YouTube Statistics Monitoring System</div>
+    </header>
+
+    <main>
+      <div id="pageCommand" class="terminal-label">monitor --channel youtube --live</div>
+      <section id="dashboardView" class="page-view">
+      <!-- CHANNEL -->
+
+      <div class="channel">
+        <img id="channelThumbnail" src="" alt="Kanaal" />
+
+        <div>
+          <h2 id="channelName">LOADING...</h2>
+
+          <p id="channelDescription"></p>
+        </div>
+      </div>
+
+      <!-- STATISTICS -->
+
+      <div class="stats">
+        <div class="card">
+          <h3>Subscribers</h3>
+
+          <div class="value" id="subscribers">---</div>
+        </div>
+
+        <div class="card">
+          <h3>Total Views</h3>
+
+          <div class="value" id="views">---</div>
+        </div>
+
+        <div class="card">
+          <h3>Videos</h3>
+
+          <div class="value" id="videos">---</div>
+        </div>
+      </div>
+
+      <!-- 30-DAY HISTORY -->
+
+      <div class="section-title">30-DAY GROWTH</div>
+
+      <div class="growth-grid">
+        <div class="growth-card">
+          <h3>Subscribers</h3>
+          <div class="growth-value" id="subscriberGrowth">---</div>
+          <div class="growth-percent" id="subscriberGrowthPercent">Waiting for history...</div>
+        </div>
+        <div class="growth-card">
+          <h3>Total Views</h3>
+          <div class="growth-value" id="viewGrowth">---</div>
+          <div class="growth-percent" id="viewGrowthPercent">Waiting for history...</div>
+        </div>
+        <div class="growth-card">
+          <h3>Videos</h3>
+          <div class="growth-value" id="videoGrowth">---</div>
+          <div class="growth-percent" id="videoGrowthPercent">Waiting for history...</div>
+        </div>
+      </div>
+
+      <div class="growth-chart">
+        <svg id="historyChart" viewBox="0 0 800 220" role="img" aria-label="30-day views history"></svg>
+        <div id="historyEmpty" class="history-empty">The chart will fill as daily snapshots are collected.</div>
+      </div>
+      </section>
+
+      <!-- VIDEO MONITOR -->
+
+      <section id="videoView" class="page-view" hidden>
+      <div class="section-title">VIDEO DATA</div>
+
+      <div id="videoList" class="videos">
+        <div class="video-meta">Loading video data...</div>
+      </div>
+      </section>
+
+      <section id="topVideosView" class="page-view" hidden>
+        <div class="section-title">TOP VIDEOS</div>
+        <div id="topVideoMessage" class="history-empty">Loading video rankings...</div>
+        <div id="topVideoList" class="videos"></div>
+      </section>
+
+      <section id="alertsView" class="page-view" hidden>
+        <div class="section-title">ALERTS</div>
+        <div id="alertList">
+          <div class="history-empty">Scanning channel signals...</div>
+        </div>
+      </section>
+
+      <section id="systemView" class="page-view" hidden>
+        <div class="section-title">SYSTEM STATUS</div>
+        <div id="systemMessage" class="history-empty">Reading system status...</div>
+        <div id="systemGrid" class="system-grid"></div>
+      </section>
+
+      <!-- STATUS -->
+
+      <div id="status">Initializing YouTube data connection...</div>
+    </main>
+
+    <script>
+      /* ================================
+       NUMBER FORMAT
+    ================================= */
+
+      function formatNumber(number) {
+        return Number(number).toLocaleString("nl-BE");
+      }
+
+      /* ================================
+       LOAD CHANNEL
+    ================================= */
+
+      async function loadChannel() {
+        try {
+          const response = await fetch("/api/channel");
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error);
+          }
+
+          document.getElementById("channelName").textContent =
+            data.name.toUpperCase();
+
+          document.getElementById("channelDescription").textContent =
+            data.description;
+
+          document.getElementById("channelThumbnail").src = data.thumbnail;
+
+          document.getElementById("subscribers").textContent = formatNumber(
+            data.subscribers,
+          );
+
+          document.getElementById("views").textContent = formatNumber(
+            data.views,
+          );
+
+          document.getElementById("videos").textContent = formatNumber(
+            data.videos,
+          );
+        } catch (error) {
+          console.error(error);
+
+          document.getElementById("status").textContent =
+            "ERROR: Unable to retrieve YouTube statistics.";
+        }
+      }
+
+      /* ================================
+       LOAD VIDEOS
+    ================================= */
+
+      function renderVideoCards(container, videos) {
+        container.innerHTML = "";
+
+        if (videos.length === 0) {
+          container.innerHTML = '<div class="video-meta">No videos found.</div>';
+          return;
+        }
+
+        videos.forEach((video) => {
+          const element = document.createElement("div");
+          element.className = "video";
+          const date = new Date(video.publishedAt).toLocaleDateString("nl-BE");
+
+          element.innerHTML = `
+            <img src="${escapeHtml(video.thumbnail)}" alt="Video thumbnail">
+            <div class="video-info">
+              <div class="video-title">${escapeHtml(video.title)}</div>
+              <div class="video-meta">
+                <span>VIEWS:</span> ${formatNumber(video.views)}<br>
+                <span>LIKES:</span> ${formatNumber(video.likes)}<br>
+                <span>COMMENTS:</span> ${formatNumber(video.comments)}<br>
+                <span>PUBLISHED:</span> ${date}
+              </div>
+            </div>
+          `;
+          container.appendChild(element);
+        });
+      }
+
+      async function fetchVideos() {
+        const response = await fetch("/api/videos");
+        const videos = await response.json();
+        if (!response.ok) throw new Error(videos.error);
+        return videos;
+      }
+
+      async function loadVideos() {
+        try {
+          renderVideoCards(document.getElementById("videoList"), await fetchVideos());
+        } catch (error) {
+          console.error(error);
+          document.getElementById("videoList").innerHTML = '<div class="video-meta">ERROR: Unable to retrieve video data.</div>';
+        }
+      }
+
+      async function loadTopVideos() {
+        const message = document.getElementById("topVideoMessage");
+        try {
+          const videos = await fetchVideos();
+          videos.sort((a, b) => Number(b.views) - Number(a.views));
+          message.textContent = `${videos.length} videos ranked by total views`;
+          renderVideoCards(document.getElementById("topVideoList"), videos);
+        } catch (error) {
+          console.error(error);
+          message.textContent = "ERROR: Unable to retrieve video rankings.";
+        }
+      }
+
+      async function loadAlerts() {
+        const container = document.getElementById("alertList");
+        container.innerHTML = "";
+        try {
+          const [historyResponse, videos] = await Promise.all([
+            fetch("/api/history").then((response) => response.json()),
+            fetchVideos()
+          ]);
+          const alerts = [];
+          const growth = historyResponse.growth?.views;
+
+          if (growth?.value !== null && growth?.value !== undefined) {
+            alerts.push({
+              type: growth.value < 0 ? "warning" : "ok",
+              text: `30-day views growth: ${formatGrowth(growth)} (${formatGrowthPercent(growth)})`
+            });
+          } else {
+            alerts.push({ type: "warning", text: "Not enough daily history for a 30-day growth alert." });
+          }
+
+          alerts.push({
+            type: videos.length ? "ok" : "warning",
+            text: videos.length ? `${videos.length} recent videos available for monitoring.` : "No videos found in the current feed."
+          });
+
+          alerts.forEach((alert) => {
+            const item = document.createElement("div");
+            item.className = `alert-item ${alert.type}`;
+            item.textContent = alert.text;
+            container.appendChild(item);
+          });
+        } catch (error) {
+          console.error(error);
+          container.innerHTML = '<div class="alert-item warning">ERROR: Unable to scan channel alerts.</div>';
+        }
+      }
+
+      async function loadSystem() {
+        const message = document.getElementById("systemMessage");
+        const container = document.getElementById("systemGrid");
+        try {
+          const response = await fetch("/api/system");
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+          message.textContent = `Last server response: ${new Date(data.serverTime).toLocaleTimeString("nl-BE")}`;
+          const uptime = `${Math.floor(data.uptimeSeconds / 3600)}h ${Math.floor((data.uptimeSeconds % 3600) / 60)}m`;
+          const values = [
+            ["STATUS", data.status.toUpperCase()],
+            ["UPTIME", uptime],
+            ["NODE", data.nodeVersion],
+            ["HISTORY", `${data.historySnapshots} snapshots`],
+            ["OLDEST SNAPSHOT", data.oldestSnapshot || "none"],
+            ["YOUTUBE API", data.youtubeApiConfigured ? "configured" : "missing"]
+          ];
+          container.innerHTML = values.map(([label, value]) => `
+            <div class="system-card">
+              <h3>${label}</h3>
+              <div class="system-value">${escapeHtml(String(value))}</div>
+            </div>
+          `).join("");
+        } catch (error) {
+          console.error(error);
+          message.textContent = "ERROR: Unable to retrieve system status.";
+        }
+      }
+
+      function formatGrowth(growth) {
+        if (growth.value === null) return "---";
+        return `${growth.value >= 0 ? "+" : ""}${formatNumber(growth.value)}`;
+      }
+
+      function formatGrowthPercent(growth) {
+        if (growth.percentage === null) return "Need at least 2 daily snapshots";
+        return `${growth.percentage >= 0 ? "+" : ""}${growth.percentage.toFixed(1)}% vs first snapshot`;
+      }
+
+      function drawHistoryChart(history) {
+        const chart = document.getElementById("historyChart");
+        const empty = document.getElementById("historyEmpty");
+        chart.innerHTML = "";
+
+        if (history.length < 2) {
+          empty.style.display = "block";
+          return;
+        }
+
+        empty.style.display = "none";
+        const width = 800;
+        const height = 220;
+        const padding = 24;
+        const values = history.map((point) => Number(point.views));
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min || 1;
+        const points = values.map((value, index) => {
+          const x = padding + (index / (values.length - 1)) * (width - padding * 2);
+          const y = height - padding - ((value - min) / range) * (height - padding * 2);
+          return `${x},${y}`;
+        }).join(" ");
+
+        chart.innerHTML = `
+          <polyline points="${points}" fill="none" stroke="var(--green)" stroke-width="3" />
+          <text x="${padding}" y="18" fill="var(--dark-green)" font-size="12">VIEWS / DAY</text>
+          <text x="${padding}" y="212" fill="var(--dim-green)" font-size="11">${history[0].date}</text>
+          <text x="${width - padding}" y="212" text-anchor="end" fill="var(--dim-green)" font-size="11">${history[history.length - 1].date}</text>
+        `;
+      }
+
+      async function loadHistory() {
+        try {
+          const response = await fetch("/api/history");
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+
+          const fields = [
+            ["subscribers", "subscriberGrowth", "subscriberGrowthPercent"],
+            ["views", "viewGrowth", "viewGrowthPercent"],
+            ["videos", "videoGrowth", "videoGrowthPercent"]
+          ];
+
+          fields.forEach(([field, valueId, percentId]) => {
+            document.getElementById(valueId).textContent = formatGrowth(data.growth[field]);
+            document.getElementById(percentId).textContent = formatGrowthPercent(data.growth[field]);
+          });
+          drawHistoryChart(data.history);
+        } catch (error) {
+          console.error(error);
+          document.getElementById("historyEmpty").textContent = "ERROR: Unable to retrieve history.";
+        }
+      }
+
+      /* ================================
+       HTML SECURITY
+    ================================= */
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+
+        div.textContent = text;
+
+        return div.innerHTML;
+      }
+
+      function closeTab() {
+        window.close();
+
+        // Browsers block window.close() for tabs not opened by JavaScript.
+        // Give the user a useful fallback message in that case.
+        window.setTimeout(() => {
+          document.getElementById("status").textContent =
+            "Tab close blocked by browser — use Ctrl+W (Windows/Linux) or ⌘W (Mac).";
+        }, 150);
+      }
+
+      document.getElementById("closeTab").addEventListener("click", closeTab);
+
+      const dashboardName = document.getElementById("dashboardName");
+      const savedDashboardName = window.localStorage.getItem("xavis-dashboard-name");
+
+      function resizeDashboardName() {
+        dashboardName.style.width = `${Math.max(7, dashboardName.value.length + 1)}ch`;
+      }
+
+      if (savedDashboardName) {
+        dashboardName.value = savedDashboardName;
+      }
+
+      function showPage(pageName, updateUrl = true) {
+        const isVideoPage = pageName === "vid-data";
+        const isTopVideosPage = pageName === "top-vids";
+        const isAlertsPage = pageName === "alerts";
+        const isSystemPage = pageName === "system";
+        const currentPage = isVideoPage ? "vid-data" : isTopVideosPage ? "top-vids" : isAlertsPage ? "alerts" : isSystemPage ? "system" : "dashboard";
+        document.getElementById("dashboardView").hidden = isVideoPage || isTopVideosPage || isAlertsPage || isSystemPage;
+        document.getElementById("videoView").hidden = !isVideoPage;
+        document.getElementById("topVideosView").hidden = !isTopVideosPage;
+        document.getElementById("alertsView").hidden = !isAlertsPage;
+        document.getElementById("systemView").hidden = !isSystemPage;
+        document.getElementById("pageCommand").textContent = isVideoPage
+          ? "videos --all --live"
+          : isTopVideosPage
+            ? "videos --top --views"
+            : isAlertsPage
+              ? "alerts --scan --channel"
+              : isSystemPage
+                ? "system --status"
+                : "monitor --channel youtube --live";
+        dashboardName.value = currentPage;
+        resizeDashboardName();
+        window.localStorage.setItem("xavis-dashboard-name", dashboardName.value);
+
+        if (updateUrl) {
+          window.history.pushState({}, "", currentPage === "dashboard" ? "/" : `/${currentPage}`);
+        }
+
+        if (isTopVideosPage) {
+          loadTopVideos();
+        } else if (isAlertsPage) {
+          loadAlerts();
+        } else if (isSystemPage) {
+          loadSystem();
+        }
+      }
+
+      resizeDashboardName();
+
+      dashboardName.addEventListener("input", () => {
+        dashboardName.value = dashboardName.value.replace(/[\\/\s]/g, "");
+        window.localStorage.setItem("xavis-dashboard-name", dashboardName.value || "dashboard");
+        resizeDashboardName();
+      });
+
+      dashboardName.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const requestedPage = dashboardName.value.toLowerCase();
+          if (["vid-data", "dashboard", "top-vids", "alerts", "system"].includes(requestedPage)) {
+            showPage(requestedPage);
+          }
+          dashboardName.blur();
+        }
+      });
+
+      window.addEventListener("popstate", () => {
+        const path = window.location.pathname;
+        showPage(path.slice(1) || "dashboard", false);
+      });
+
+      const initialPath = window.location.pathname;
+      showPage(initialPath.slice(1) || "dashboard", false);
+
+      /* ================================
+       LOAD EVERYTHING
+    ================================= */
+
+      async function loadAll() {
+        await Promise.all([loadChannel(), loadVideos()]);
+        await loadHistory();
+
+        document.getElementById("status").textContent =
+          "Connection active | Last update: " +
+          new Date().toLocaleTimeString("nl-BE");
+      }
+
+      /* INITIAL LOAD */
+
+      loadAll();
+
+      /* REFRESH EVERY 60 SECONDS */
+
+      setInterval(loadAll, 60 * 1000);
+    </script>
+  </body>
+</html>
