@@ -1169,6 +1169,9 @@
           const response = await fetch("/api/config");
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
+          configurationComplete = Boolean(
+            data.youtubeApiKeyConfigured && data.youtubeChannelId,
+          );
           document.getElementById("configChannelId").value =
             data.youtubeChannelId || "";
           document.getElementById("configApiKeyStatus").textContent =
@@ -1177,6 +1180,7 @@
               : "No API key configured yet.";
           message.textContent = "Configuration loaded.";
         } catch (error) {
+          configurationComplete = false;
           console.error(error);
           message.textContent = "ERROR: Unable to load configuration.";
         }
@@ -1205,8 +1209,13 @@
             data.youtubeApiKeyConfigured
               ? `Current key: ${data.youtubeApiKey}`
               : "No API key configured yet.";
-          message.textContent = "Saved. New settings are active immediately.";
-          loadChannel();
+          configurationComplete = Boolean(
+            data.youtubeApiKeyConfigured && data.youtubeChannelId,
+          );
+          message.textContent = configurationComplete
+            ? "Saved. New settings are active immediately."
+            : "Both values are required before opening the dashboard.";
+          if (configurationComplete) showPage("dashboard");
         } catch (error) {
           console.error(error);
           message.textContent = "ERROR: Unable to save configuration.";
@@ -1232,6 +1241,7 @@
           document.getElementById("configChannelId").value = "";
           document.getElementById("configApiKeyStatus").textContent =
             "No API key configured yet.";
+          configurationComplete = false;
           message.textContent =
             "Configuration cleared. Enter new values to reconnect.";
           showPage("config", false);
@@ -1429,6 +1439,7 @@
       updateFullscreenControl();
 
       const dashboardName = document.getElementById("dashboardName");
+      let configurationComplete = null;
       const savedDashboardName = window.localStorage.getItem(
         "xavis-dashboard-name",
       );
@@ -1442,6 +1453,12 @@
       }
 
       function showPage(pageName, updateUrl = true) {
+        if (
+          configurationComplete === false &&
+          !["config", "terminal"].includes(pageName)
+        ) {
+          pageName = "config";
+        }
         const isVideoPage = pageName === "vid-data";
         const isTopVideosPage = pageName === "top-vids";
         const isAlertsPage = pageName === "alerts";
@@ -1566,6 +1583,20 @@
         if (["/config", "/terminal"].includes(window.location.pathname)) {
           document.getElementById("status").textContent =
             "Configuration required before loading YouTube data.";
+          return;
+        }
+        try {
+          const response = await fetch("/api/config");
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error);
+          configurationComplete = Boolean(
+            data.youtubeApiKeyConfigured && data.youtubeChannelId,
+          );
+        } catch (error) {
+          configurationComplete = false;
+        }
+        if (!configurationComplete) {
+          showPage("config");
           return;
         }
         await Promise.all([loadChannel(), loadVideos()]);

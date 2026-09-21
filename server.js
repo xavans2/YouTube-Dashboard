@@ -58,6 +58,9 @@ app.use(express.static("public", { index: false }));
 app.get("/", (req, res) => res.redirect("/terminal"));
 
 app.get(["/dashboard", "/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config", "/terminal"], (req, res) => {
+    if (!configStore.isComplete() && !["/config", "/terminal"].includes(req.path)) {
+        return res.redirect("/config");
+    }
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
