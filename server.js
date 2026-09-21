@@ -9,7 +9,6 @@ const {
 } = require("./lib/history");
 const { createHistoryStore } = require("./lib/history-store");
 const { createConfigStore } = require("./lib/config-store");
-require("dotenv").config();
 
 const app = express();
 const PORT = 3000;
@@ -17,11 +16,9 @@ const HISTORY_DAYS = 30;
 
 const dataDirectory = path.join(__dirname, "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
-const configStore = createConfigStore({
-    filePath: path.join(dataDirectory, "config.json")
-});
 
 const db = new Database(path.join(dataDirectory, "analytics.db"));
+const configStore = createConfigStore({ db });
 const historyStore = createHistoryStore(db);
 
 function utcDateKey(offsetDays = 0, baseDate = new Date()) {

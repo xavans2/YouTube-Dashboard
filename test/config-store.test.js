@@ -1,19 +1,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
+const Database = require("better-sqlite3");
 
 const { createConfigStore, maskSecret } = require("../lib/config-store");
 
 function createTempStore(env) {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "xavis-config-"));
-    const filePath = path.join(directory, "config.json");
-    return { directory, store: createConfigStore({ filePath, env }) };
+    const db = new Database(":memory:");
+    return { db, store: createConfigStore({ db, env }) };
 }
 
 test("uses environment values as defaults and masks the API key", () => {
-    const { directory, store } = createTempStore({
+    const { db, store } = createTempStore({
         YOUTUBE_API_KEY: "env-secret-key",
         YOUTUBE_CHANNEL_ID: "env-channel"
     });
@@ -24,11 +21,11 @@ test("uses environment values as defaults and masks the API key", () => {
     });
     assert.equal(maskSecret("env-secret-key"), "en*********ey");
     assert.equal(store.public().youtubeApiKey, "en*********ey");
-    fs.rmSync(directory, { recursive: true, force: true });
+    db.close();
 });
 
 test("persists local overrides without exposing the API key", () => {
-    const { directory, store } = createTempStore({
+    const { db, store } = createTempStore({
         YOUTUBE_API_KEY: "env-secret-key",
         YOUTUBE_CHANNEL_ID: "env-channel"
     });
@@ -42,10 +39,13 @@ test("persists local overrides without exposing the API key", () => {
         youtubeApiKey: "local-secret-key",
         youtubeChannelId: "local-channel"
     });
-    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(directory, "config.json"))), {
-        YOUTUBE_API_KEY: "local-secret-key",
-        YOUTUBE_CHANNEL_ID: "local-channel"
-    });
+    assert.deepEqual(
+        db.prepare("SELECT config_key, config_value FROM app_config ORDER BY config_key").all(),
+        [
+            { config_key: "YOUTUBE_API_KEY", config_value: "local-secret-key" },
+            { config_key: "YOUTUBE_CHANNEL_ID", config_value: "local-channel" }
+        ]
+    );
     assert.equal(store.public().youtubeApiKey, "lo*********ey");
-    fs.rmSync(directory, { recursive: true, force: true });
+    db.close();
 });
