@@ -73,8 +73,7 @@ jobs:
               --title "Xavis Analytics ${GITHUB_REF_NAME}" \
               --generate-notes \
               --draft \
-              --verify-tag \
-              --latest
+              --verify-tag
           fi
 
       - name: Upload all release assets
@@ -103,10 +102,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release edit "${GITHUB_REF_NAME}" \
+          release_id=$(gh release view "${GITHUB_REF_NAME}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --draft=false \
-            --latest
+            --json databaseId \
+            --jq '.databaseId')
+          gh api --method PATCH \
+            "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+            --field draft=false \
+            --field prerelease=false \
+            --field make_latest=true
 
   fallback-artifact:
     needs: [release, publish]
