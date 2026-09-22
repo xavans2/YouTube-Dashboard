@@ -10,4 +10,6 @@ test("persists terminal output and resets it at the next start command", () => {
     assert.match(html, /appendTerminalLine\(`root@xavis:~\$ \$\{command\}`\)/);
     assert.match(html, /terminalHistory = \[\];/);
     assert.match(html, /renderTerminalHistory\(\);/);
+    assert.match(html, /xavis-terminal-started/);
+    assert.match(html, /api\/terminal\/status/);
 });

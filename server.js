@@ -83,6 +83,10 @@ app.get("/api/config", (req, res) => {
     res.json(configStore.public());
 });
 
+app.get("/api/terminal/status", (req, res) => {
+    res.json({ started: terminalStarted });
+});
+
 app.post("/api/terminal/start", (req, res) => {
     if (req.body?.command !== "/usr/local/system/start") {
         return res.status(400).json({

@@ -1346,6 +1346,7 @@
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
           terminalStarted = true;
+          window.localStorage.setItem(terminalStartedKey, "true");
           appendTerminalLine(data.message);
           window.setTimeout(() => {
             window.location.assign(data.redirectPath);
@@ -1357,6 +1358,7 @@
             const configData = await configResponse.json();
             if (!configResponse.ok) throw new Error(configData.error);
             terminalStarted = true;
+            window.localStorage.setItem(terminalStartedKey, "true");
             appendTerminalLine(
               "node server.js is already running in the background.",
             );
@@ -1549,7 +1551,9 @@
 
       const dashboardName = document.getElementById("dashboardName");
       let configurationComplete = null;
-      let terminalStarted = false;
+      const terminalStartedKey = "xavis-terminal-started";
+      let terminalStarted =
+        window.localStorage.getItem(terminalStartedKey) === "true";
       const terminalHistoryKey = "xavis-terminal-history";
       const terminalWelcome = [
         "XAVIS local system launcher",
@@ -1595,7 +1599,32 @@
       }
 
       loadTerminalHistory();
+      if (
+        !terminalStarted &&
+        terminalHistory.includes("root@xavis:~$ /usr/local/system/start")
+      ) {
+        terminalStarted = true;
+        window.localStorage.setItem(terminalStartedKey, "true");
+      }
       renderTerminalHistory();
+
+      async function syncTerminalState() {
+        try {
+          const response = await fetch("/api/terminal/status");
+          if (!response.ok) return;
+          const data = await response.json();
+          terminalStarted = Boolean(data.started);
+          window.localStorage.setItem(
+            terminalStartedKey,
+            String(terminalStarted),
+          );
+          if (!terminalStarted && window.location.pathname !== "/terminal") {
+            showPage("terminal", false);
+          }
+        } catch (error) {
+          console.warn("Unable to synchronize terminal state", error);
+        }
+      }
 
       function resizeDashboardName() {
         dashboardName.style.width = `${Math.max(7, dashboardName.value.length + 1)}ch`;
@@ -1751,6 +1780,7 @@
 
       const initialPath = window.location.pathname;
       showPage(initialPath.slice(1) || "terminal", false);
+      syncTerminalState();
 
       /* ================================
        LOAD EVERYTHING
