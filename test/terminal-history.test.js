@@ -19,8 +19,9 @@ test("supports terminal page commands while keeping the shared page bar", () => 
 
     assert.match(html, /usr\\\/local\\\/system\\\//);
     assert.match(html, /dashboard\|vid-data\|top-vids\|alerts\|system\|config\|terminal/);
-    assert.match(html, /const helpCommand = command === "--h"/);
-    assert.match(html, /Type --h for command help/);
+    assert.match(html, /const systemCommand = command === "\/usr\/local\/system"/);
+    assert.match(html, /const helpCommand = command === "-h"/);
+    assert.match(html, /Type -h for command help/);
     assert.match(html, /window\.location\.assign\(pagePath\)/);
     assert.match(html, /\/usr\/local\/system\/<input/);
     assert.doesNotMatch(html, /\/usr\/local\/<span id="channelPath"/);
