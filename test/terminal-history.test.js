@@ -18,7 +18,9 @@ test("supports terminal page commands while keeping the shared page bar", () => 
     const html = fs.readFileSync("public/index.html", "utf8");
 
     assert.match(html, /usr\\\/local\\\/system\\\//);
-    assert.match(html, /dashboard\|vid-data\|top-vids\|alerts\|system\|help\|config\|terminal/);
+    assert.match(html, /dashboard\|vid-data\|top-vids\|alerts\|system\|config\|terminal/);
+    assert.match(html, /const helpCommand = command === "--h"/);
+    assert.match(html, /Type --h for command help/);
     assert.match(html, /window\.location\.assign\(pagePath\)/);
     assert.match(html, /id="dashboardName"/);
 });

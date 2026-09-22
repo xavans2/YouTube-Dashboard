@@ -823,8 +823,9 @@
         <div class="section-title">SYSTEM TERMINAL</div>
         <div class="terminal-view">
           <div id="terminalOutput" class="terminal-output">
-            <div>XAVIS local system launcher</div>
-            <div>Type /usr/local/system/start to start the dashboard.</div>
+        <div>XAVIS local system launcher</div>
+        <div>Type /usr/local/system/start to start the dashboard.</div>
+        <div>Type --h for command help.</div>
           </div>
           <div class="terminal-prompt">
             <span class="terminal-prompt-label">root@xavis:~$</span>
@@ -1330,9 +1331,10 @@
         input.value = "";
 
         const pageCommand = command.match(
-          /^\/usr\/local\/system\/(dashboard|vid-data|top-vids|alerts|system|help|config|terminal)$/,
+          /^\/usr\/local\/system\/(dashboard|vid-data|top-vids|alerts|system|config|terminal)$/,
         );
-        if (pageCommand) {
+        const helpCommand = command === "--h";
+        if (pageCommand || helpCommand) {
           if (!terminalStarted) {
             appendTerminalLine(
               "ERROR: run /usr/local/system/start before opening a page",
@@ -1340,7 +1342,7 @@
             input.focus();
             return;
           }
-          const pagePath = `/${pageCommand[1]}`;
+          const pagePath = helpCommand ? "/help" : `/${pageCommand[1]}`;
           appendTerminalLine(`Opening ${pagePath}...`);
           window.setTimeout(() => {
             window.location.assign(pagePath);
