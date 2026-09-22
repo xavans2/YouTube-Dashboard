@@ -96,3 +96,22 @@ jobs:
               exit 1
             fi
           done < <(find release-assets -type f ! -name 'builder-debug.yml' -print0)
+
+  fallback-artifact:
+    needs: [release, publish]
+    if: ${{ always() && needs.release.result == 'success' && needs.publish.result == 'failure' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all platform builds
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: false
+
+      - name: Save builds as fallback artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-builds-${{ github.ref_name }}-fallback
+          path: release-assets
+          retention-days: 90
