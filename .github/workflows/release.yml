@@ -62,7 +62,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" release-assets/* \
+          mapfile -d '' release_files < <(find release-assets -type f ! -name 'builder-debug.yml' -print0)
+          gh release create "${GITHUB_REF_NAME}" "${release_files[@]}" \
             --title "Xavis Analytics ${GITHUB_REF_NAME}" \
             --generate-notes \
             --latest
