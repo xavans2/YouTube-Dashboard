@@ -72,6 +72,8 @@ jobs:
             gh release create "${GITHUB_REF_NAME}" \
               --title "Xavis Analytics ${GITHUB_REF_NAME}" \
               --generate-notes \
+              --draft \
+              --verify-tag \
               --latest
           fi
 
@@ -96,6 +98,15 @@ jobs:
               exit 1
             fi
           done < <(find release-assets -type f ! -name 'builder-debug.yml' -print0)
+
+      - name: Publish GitHub Release after assets are uploaded
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft=false \
+            --latest
 
   fallback-artifact:
     needs: [release, publish]
