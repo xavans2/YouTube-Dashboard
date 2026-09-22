@@ -1,6 +1,6 @@
 {
   "name": "xavis-analytics",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Local YouTube analytics dashboard with a terminal-style interface",
   "main": "electron/main.js",
   "scripts": {
