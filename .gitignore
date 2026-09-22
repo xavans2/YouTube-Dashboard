@@ -6,3 +6,4 @@ data/config.json
 planning/
 dist/
 out/
+desktop-builds-*/
