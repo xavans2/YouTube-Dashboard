@@ -588,6 +588,20 @@
         box-shadow: 0 0 10px rgba(0, 255, 102, 0.18);
       }
 
+      .config-field input[type="checkbox"] {
+        width: auto;
+        accent-color: var(--green);
+      }
+
+      .config-field select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        background: var(--black);
+        color: var(--green);
+        font: inherit;
+      }
+
       .config-hint {
         color: var(--muted-green);
         font-size: 12px;
@@ -996,6 +1010,28 @@
             <label for="configChannelId">YOUTUBE_CHANNEL_ID</label>
             <input id="configChannelId" type="text" autocomplete="off" />
           </div>
+          <div class="config-field">
+            <label for="configRefreshInterval">REFRESH_INTERVAL_SECONDS</label>
+            <input id="configRefreshInterval" type="number" min="15" max="3600" step="1" />
+            <div class="config-hint">Allowed range: 15–3600 seconds.</div>
+          </div>
+          <div class="config-field">
+            <label for="configAlertThreshold">ALERT_GROWTH_THRESHOLD_PERCENT</label>
+            <input id="configAlertThreshold" type="number" min="0" max="100" step="0.1" />
+            <div class="config-hint">Minimum positive growth percentage for an alert.</div>
+          </div>
+          <div class="config-field">
+            <label for="configHistoryDays">DEFAULT_HISTORY_DAYS</label>
+            <select id="configHistoryDays">
+              <option value="7">7 days</option>
+              <option value="30">30 days</option>
+              <option value="90">90 days</option>
+            </select>
+          </div>
+          <label class="config-field">
+            <span>DISPLAY_CHANNEL_DESCRIPTION</span>
+            <input id="configShowDescription" type="checkbox" />
+          </label>
           <button id="saveConfig" class="config-button" type="button">
             Save local configuration
           </button>
@@ -1057,6 +1093,8 @@
 
           document.getElementById("channelDescription").textContent =
             data.description;
+          document.getElementById("channelDescription").hidden =
+            !showChannelDescription;
 
           document.getElementById("channelThumbnail").src = data.thumbnail;
 
@@ -1150,14 +1188,22 @@
         const container = document.getElementById("alertList");
         container.innerHTML = "";
         try {
-          const [historyResponse, videos] = await Promise.all([
+          const [historyResponse, videos, configResponse] = await Promise.all([
             fetch("/api/history").then((response) => response.json()),
             fetchVideos(),
+            fetch("/api/config").then((response) => response.json()),
           ]);
+          const alertThreshold = Number(
+            configResponse.settings?.alertGrowthThresholdPercent || 0,
+          );
           const alerts = [];
           const growth = historyResponse.growth?.views;
 
-          if (growth?.value !== null && growth?.value !== undefined) {
+          if (
+            growth?.value !== null &&
+            growth?.value !== undefined &&
+            (growth.percentage ?? 0) >= alertThreshold
+          ) {
             alerts.push({
               type: growth.value < 0 ? "warning" : "ok",
               text: `30-day views growth: ${formatGrowth(growth)} (${formatGrowthPercent(growth)})`,
@@ -1165,7 +1211,7 @@
           } else {
             alerts.push({
               type: "warning",
-              text: "Not enough daily history for a 30-day growth alert.",
+              text: "Growth is below the configured alert threshold or history is incomplete.",
             });
           }
 
@@ -1242,6 +1288,7 @@
             data.youtubeApiKeyConfigured
               ? `Current key: ${data.youtubeApiKey}`
               : "No API key configured yet.";
+          applySettings(data.settings);
           message.textContent = "Configuration loaded.";
         } catch (error) {
           configurationComplete = false;
@@ -1255,7 +1302,21 @@
         const message = document.getElementById("configMessage");
         const apiKey = document.getElementById("configApiKey").value.trim();
         const channelId = document.getElementById("configChannelId").value.trim();
-        const payload = { youtubeChannelId: channelId };
+        const payload = {
+          youtubeChannelId: channelId,
+          refreshIntervalSeconds: Number(
+            document.getElementById("configRefreshInterval").value,
+          ),
+          alertGrowthThresholdPercent: Number(
+            document.getElementById("configAlertThreshold").value,
+          ),
+          defaultHistoryDays: Number(
+            document.getElementById("configHistoryDays").value,
+          ),
+          showChannelDescription: document.getElementById(
+            "configShowDescription",
+          ).checked,
+        };
         if (apiKey) payload.youtubeApiKey = apiKey;
 
         button.disabled = true;
@@ -1276,6 +1337,7 @@
           configurationComplete = Boolean(
             data.youtubeApiKeyConfigured && data.youtubeChannelId,
           );
+          applySettings(data.settings);
           message.textContent = configurationComplete
             ? "Saved. New settings are active immediately."
             : "Both values are required before opening the dashboard.";
@@ -1286,6 +1348,25 @@
         } finally {
           button.disabled = false;
         }
+      }
+
+      function applySettings(settings = {}) {
+        refreshIntervalSeconds = Number(
+          settings.refreshIntervalSeconds || 60,
+        );
+        alertGrowthThresholdPercent = Number(
+          settings.alertGrowthThresholdPercent || 0,
+        );
+        showChannelDescription = settings.showChannelDescription !== false;
+        selectedHistoryDays = Number(settings.defaultHistoryDays || 30);
+        document.getElementById("configRefreshInterval").value =
+          refreshIntervalSeconds;
+        document.getElementById("configAlertThreshold").value =
+          settings.alertGrowthThresholdPercent ?? 0;
+        document.getElementById("configHistoryDays").value =
+          String(selectedHistoryDays);
+        document.getElementById("configShowDescription").checked =
+          settings.showChannelDescription !== false;
       }
 
       async function resetConfig() {
@@ -1305,6 +1386,7 @@
           document.getElementById("configChannelId").value = "";
           document.getElementById("configApiKeyStatus").textContent =
             "No API key configured yet.";
+          applySettings(data.settings);
           configurationComplete = false;
           message.textContent =
             "Configuration cleared. Enter new values to reconnect.";
@@ -1575,6 +1657,9 @@
       const terminalStartedKey = "xavis-terminal-started";
       let terminalStarted =
         window.localStorage.getItem(terminalStartedKey) === "true";
+      let refreshIntervalSeconds = 60;
+      let alertGrowthThresholdPercent = 0;
+      let showChannelDescription = true;
       const terminalHistoryKey = "xavis-terminal-history";
       const terminalWelcome = [
         "XAVIS local system launcher",
@@ -1820,6 +1905,7 @@
           configurationComplete = Boolean(
             data.youtubeApiKeyConfigured && data.youtubeChannelId,
           );
+          applySettings(data.settings);
         } catch (error) {
           configurationComplete = false;
         }
@@ -1835,13 +1921,14 @@
           new Date().toLocaleTimeString("nl-BE");
       }
 
+      async function refreshDashboard() {
+        await loadAll();
+        window.setTimeout(refreshDashboard, refreshIntervalSeconds * 1000);
+      }
+
       /* INITIAL LOAD */
 
-      loadAll();
-
-      /* REFRESH EVERY 60 SECONDS */
-
-      setInterval(loadAll, 60 * 1000);
+      refreshDashboard();
     </script>
   </body>
 </html>

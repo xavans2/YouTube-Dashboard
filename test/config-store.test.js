@@ -43,6 +43,10 @@ test("persists local overrides without exposing the API key", () => {
     assert.deepEqual(
         db.prepare("SELECT config_key, config_value FROM app_config ORDER BY config_key").all(),
         [
+            { config_key: "ALERT_GROWTH_THRESHOLD_PERCENT", config_value: "0" },
+            { config_key: "DEFAULT_HISTORY_DAYS", config_value: "30" },
+            { config_key: "REFRESH_INTERVAL_SECONDS", config_value: "60" },
+            { config_key: "SHOW_CHANNEL_DESCRIPTION", config_value: "true" },
             { config_key: "YOUTUBE_API_KEY", config_value: "local-secret-key" },
             { config_key: "YOUTUBE_CHANNEL_ID", config_value: "local-channel" }
         ]
@@ -53,6 +57,46 @@ test("persists local overrides without exposing the API key", () => {
     assert.deepEqual(store.read(), {
         youtubeApiKey: "env-secret-key",
         youtubeChannelId: "env-channel"
+    });
+    db.close();
+});
+
+test("persists validated dashboard settings with safe defaults", () => {
+    const { db, store } = createTempStore({});
+
+    assert.deepEqual(store.public().settings, {
+        refreshIntervalSeconds: 60,
+        alertGrowthThresholdPercent: 0,
+        defaultHistoryDays: 30,
+        showChannelDescription: true
+    });
+
+    store.update({
+        refreshIntervalSeconds: 120,
+        alertGrowthThresholdPercent: 12.5,
+        defaultHistoryDays: 90,
+        showChannelDescription: false
+    });
+
+    assert.deepEqual(store.public().settings, {
+        refreshIntervalSeconds: 120,
+        alertGrowthThresholdPercent: 12.5,
+        defaultHistoryDays: 90,
+        showChannelDescription: false
+    });
+
+    store.update({
+        refreshIntervalSeconds: 1,
+        alertGrowthThresholdPercent: -4,
+        defaultHistoryDays: 14,
+        showChannelDescription: "no"
+    });
+
+    assert.deepEqual(store.public().settings, {
+        refreshIntervalSeconds: 60,
+        alertGrowthThresholdPercent: 0,
+        defaultHistoryDays: 30,
+        showChannelDescription: true
     });
     db.close();
 });
