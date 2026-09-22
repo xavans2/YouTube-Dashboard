@@ -59,14 +59,26 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-assets
-          merge-multiple: true
+          # Keep each platform in its own directory. Some electron-builder
+          # metadata files share a name across platforms and cannot be merged
+          # into one directory by download-artifact.
+          merge-multiple: false
 
-      - name: Publish one GitHub Release
+      - name: Create GitHub Release if needed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mapfile -d '' release_files < <(find release-assets -type f ! -name 'builder-debug.yml' -print0)
-          gh release create "${GITHUB_REF_NAME}" "${release_files[@]}" \
-            --title "Xavis Analytics ${GITHUB_REF_NAME}" \
-            --generate-notes \
-            --latest
+          if ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "Xavis Analytics ${GITHUB_REF_NAME}" \
+              --generate-notes \
+              --latest
+          fi
+
+      - name: Upload all release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          while IFS= read -r -d '' asset; do
+            gh release upload "${GITHUB_REF_NAME}" "$asset" --clobber
+          done < <(find release-assets -type f ! -name 'builder-debug.yml' -print0)
