@@ -1,6 +1,6 @@
 {
   "name": "xavis-analytics",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Local YouTube analytics dashboard with a terminal-style interface",
   "main": "electron/main.js",
   "scripts": {
@@ -43,7 +43,8 @@
     "publish": {
       "provider": "github",
       "owner": "xavans2",
-      "repo": "YouTube-Dashboard"
+      "repo": "YouTube-Dashboard",
+      "releaseType": "release"
     },
     "mac": {
       "target": "dmg"
