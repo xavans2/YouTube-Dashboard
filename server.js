@@ -5,7 +5,10 @@ const path = require("path");
 const Database = require("better-sqlite3");
 const {
     buildHistoryWithCarryForward,
-    calculateGrowth
+    calculateGrowth,
+    DEFAULT_HISTORY_DAYS,
+    MAX_HISTORY_DAYS,
+    normalizeHistoryDays
 } = require("./lib/history");
 const { createHistoryStore } = require("./lib/history-store");
 const { createConfigStore } = require("./lib/config-store");
@@ -13,7 +16,8 @@ const { buildHealthStatus } = require("./lib/health");
 
 const app = express();
 const PORT = 3000;
-const HISTORY_DAYS = 30;
+const HISTORY_DAYS = MAX_HISTORY_DAYS;
+let terminalStarted = false;
 
 const dataDirectory = path.join(__dirname, "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
@@ -29,9 +33,9 @@ function utcDateKey(offsetDays = 0, baseDate = new Date()) {
     return date.toISOString().slice(0, 10);
 }
 
-function getHistoryWithCarryForward() {
-    const snapshots = historyStore.findFrom(utcDateKey(-HISTORY_DAYS));
-    return buildHistoryWithCarryForward(snapshots, HISTORY_DAYS);
+function getHistoryWithCarryForward(days = DEFAULT_HISTORY_DAYS) {
+    const snapshots = historyStore.findFrom(utcDateKey(-days));
+    return buildHistoryWithCarryForward(snapshots, days);
 }
 
 function recordChannelSnapshot(channel) {
@@ -58,6 +62,9 @@ app.use(express.static("public", { index: false }));
 app.get("/", (req, res) => res.redirect("/terminal"));
 
 app.get(["/dashboard", "/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config", "/terminal"], (req, res) => {
+    if (!terminalStarted && req.path !== "/terminal") {
+        return res.redirect("/terminal");
+    }
     if (!configStore.isComplete() && !["/config", "/terminal"].includes(req.path)) {
         return res.redirect("/config");
     }
@@ -76,6 +83,10 @@ app.get("/api/config", (req, res) => {
     res.json(configStore.public());
 });
 
+app.get("/api/terminal/status", (req, res) => {
+    res.json({ started: terminalStarted });
+});
+
 app.post("/api/terminal/start", (req, res) => {
     if (req.body?.command !== "/usr/local/system/start") {
         return res.status(400).json({
@@ -83,6 +94,7 @@ app.post("/api/terminal/start", (req, res) => {
         });
     }
 
+    terminalStarted = true;
     res.json({
         ok: true,
         status: "already-running",
@@ -173,10 +185,11 @@ app.get("/api/channel", async (req, res) => {
 
 app.get("/api/history", (req, res) => {
     try {
-        const history = getHistoryWithCarryForward();
+        const days = normalizeHistoryDays(req.query.days);
+        const history = getHistoryWithCarryForward(days);
 
         res.json({
-            days: HISTORY_DAYS,
+            days,
             history,
             growth: {
                 subscribers: calculateGrowth(history, "subscribers"),

@@ -306,6 +306,58 @@
         background: var(--panel);
       }
 
+      .history-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: -6px 0 12px;
+      }
+
+      .history-period {
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--dim-green);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .history-period:hover,
+      .history-period[aria-pressed="true"] {
+        border-color: var(--green);
+        color: var(--green);
+      }
+
+      .history-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 8px;
+        color: var(--dim-green);
+        font-size: 12px;
+      }
+
+      .history-legend span::before {
+        content: "";
+        display: inline-block;
+        width: 18px;
+        margin-right: 5px;
+        border-top: 2px solid currentColor;
+        vertical-align: middle;
+      }
+
+      .history-legend .subscribers {
+        color: var(--green);
+      }
+
+      .history-legend .views {
+        color: #8cff66;
+      }
+
+      .history-legend .videos {
+        color: #b5ff9d;
+      }
+
       #historyChart {
         display: block;
         width: 100%;
@@ -824,9 +876,15 @@
           </div>
         </div>
 
-        <!-- 30-DAY HISTORY -->
+        <!-- MULTI-PERIOD HISTORY -->
 
-        <div class="section-title">30-DAY GROWTH</div>
+        <div class="section-title" id="historyPeriodLabel">30-DAY GROWTH</div>
+
+        <div class="history-controls" role="group" aria-label="History period">
+          <button class="history-period" type="button" data-days="7" aria-pressed="false">7D</button>
+          <button class="history-period" type="button" data-days="30" aria-pressed="true">30D</button>
+          <button class="history-period" type="button" data-days="90" aria-pressed="false">90D</button>
+        </div>
 
         <div class="growth-grid">
           <div class="growth-card">
@@ -857,8 +915,13 @@
             id="historyChart"
             viewBox="0 0 800 220"
             role="img"
-            aria-label="30-day views history"
+            aria-label="30-day subscribers, views and videos history"
           ></svg>
+          <div class="history-legend" aria-label="Trend legend">
+            <span class="subscribers">Subscribers</span>
+            <span class="views">Views</span>
+            <span class="videos">Videos</span>
+          </div>
           <div id="historyEmpty" class="history-empty">
             The chart will fill as daily snapshots are collected.
           </div>
@@ -1259,22 +1322,39 @@
         const command = input.value.trim();
         if (!command) return;
 
-        const entered = document.createElement("div");
-        entered.textContent = `root@xavis:~$ ${command}`;
-        output.appendChild(entered);
+        if (command === "/usr/local/system/start") {
+          terminalHistory = [];
+          output.innerHTML = "";
+        }
+        appendTerminalLine(`root@xavis:~$ ${command}`);
         input.value = "";
 
+        const pageCommand = command.match(
+          /^\/usr\/local\/system\/(dashboard|vid-data|top-vids|alerts|system|help|config|terminal)$/,
+        );
+        if (pageCommand) {
+          if (!terminalStarted) {
+            appendTerminalLine(
+              "ERROR: run /usr/local/system/start before opening a page",
+            );
+            input.focus();
+            return;
+          }
+          const pagePath = `/${pageCommand[1]}`;
+          appendTerminalLine(`Opening ${pagePath}...`);
+          window.setTimeout(() => {
+            window.location.assign(pagePath);
+          }, 250);
+          return;
+        }
+
         if (command !== "/usr/local/system/start") {
-          const error = document.createElement("div");
-          error.textContent = "ERROR: command not found";
-          output.appendChild(error);
+          appendTerminalLine("ERROR: command not found");
           input.focus();
           return;
         }
 
-        const starting = document.createElement("div");
-        starting.textContent = "Starting node server.js in background...";
-        output.appendChild(starting);
+        appendTerminalLine("Starting node server.js in background...");
         input.disabled = true;
         try {
           const response = await fetch("/api/terminal/start", {
@@ -1284,9 +1364,9 @@
           });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
-          const ready = document.createElement("div");
-          ready.textContent = data.message;
-          output.appendChild(ready);
+          terminalStarted = true;
+          window.localStorage.setItem(terminalStartedKey, "true");
+          appendTerminalLine(data.message);
           window.setTimeout(() => {
             window.location.assign(data.redirectPath);
           }, 250);
@@ -1296,10 +1376,11 @@
             const configResponse = await fetch("/api/config");
             const configData = await configResponse.json();
             if (!configResponse.ok) throw new Error(configData.error);
-            const compatible = document.createElement("div");
-            compatible.textContent =
-              "node server.js is already running in the background.";
-            output.appendChild(compatible);
+            terminalStarted = true;
+            window.localStorage.setItem(terminalStartedKey, "true");
+            appendTerminalLine(
+              "node server.js is already running in the background.",
+            );
             window.setTimeout(() => {
               window.location.assign(
                 configData.youtubeApiKeyConfigured && configData.youtubeChannelId
@@ -1309,10 +1390,9 @@
             }, 250);
           } catch (fallbackError) {
             console.error(fallbackError);
-            const failed = document.createElement("div");
-            failed.textContent =
-              "ERROR: node server.js is not reachable. Start it once with: node server.js";
-            output.appendChild(failed);
+            appendTerminalLine(
+              "ERROR: node server.js is not reachable. Start it once with: node server.js",
+            );
             input.disabled = false;
             input.focus();
           }
@@ -1330,10 +1410,14 @@
         return `${growth.percentage >= 0 ? "+" : ""}${growth.percentage.toFixed(1)}% vs first snapshot`;
       }
 
-      function drawHistoryChart(history) {
+      function drawHistoryChart(history, days) {
         const chart = document.getElementById("historyChart");
         const empty = document.getElementById("historyEmpty");
         chart.innerHTML = "";
+        chart.setAttribute(
+          "aria-label",
+          `${days}-day subscribers, views and videos history`,
+        );
 
         if (history.length < 2) {
           empty.style.display = "block";
@@ -1344,35 +1428,61 @@
         const width = 800;
         const height = 220;
         const padding = 24;
-        const values = history.map((point) => Number(point.views));
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const range = max - min || 1;
-        const points = values
-          .map((value, index) => {
-            const x =
-              padding + (index / (values.length - 1)) * (width - padding * 2);
-            const y =
-              height -
-              padding -
-              ((value - min) / range) * (height - padding * 2);
-            return `${x},${y}`;
+        const series = [
+          ["subscribers", "var(--green)"],
+          ["views", "#8cff66"],
+          ["videos", "#b5ff9d"],
+        ];
+        const lines = series
+          .map(([field, color]) => {
+            const values = history.map((point) => Number(point[field]));
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const range = max - min || 1;
+            const points = values
+              .map((value, index) => {
+                const x =
+                  padding +
+                  (index / (values.length - 1)) * (width - padding * 2);
+                const y =
+                  height -
+                  padding -
+                  ((value - min) / range) * (height - padding * 2);
+                return `${x},${y}`;
+              })
+              .join(" ");
+            return `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="3" />`;
           })
-          .join(" ");
+          .join("");
 
         chart.innerHTML = `
-          <polyline points="${points}" fill="none" stroke="var(--green)" stroke-width="3" />
-          <text x="${padding}" y="18" fill="var(--dark-green)" font-size="12">VIEWS / DAY</text>
+          ${lines}
+          <text x="${padding}" y="18" fill="var(--dark-green)" font-size="12">NORMALIZED TREND</text>
           <text x="${padding}" y="212" fill="var(--dim-green)" font-size="11">${history[0].date}</text>
           <text x="${width - padding}" y="212" text-anchor="end" fill="var(--dim-green)" font-size="11">${history[history.length - 1].date}</text>
         `;
       }
 
-      async function loadHistory() {
+      let historyRequestId = 0;
+      let selectedHistoryDays = 30;
+
+      async function loadHistory(days = selectedHistoryDays) {
+        const requestId = ++historyRequestId;
         try {
-          const response = await fetch("/api/history");
+          const response = await fetch(`/api/history?days=${days}`);
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
+          if (requestId !== historyRequestId) return;
+
+          selectedHistoryDays = data.days;
+          document.getElementById("historyPeriodLabel").textContent =
+            `${data.days}-DAY GROWTH`;
+          document.querySelectorAll(".history-period").forEach((button) => {
+            button.setAttribute(
+              "aria-pressed",
+              button.dataset.days === String(data.days) ? "true" : "false",
+            );
+          });
 
           const fields = [
             ["subscribers", "subscriberGrowth", "subscriberGrowthPercent"],
@@ -1387,8 +1497,9 @@
             document.getElementById(percentId).textContent =
               formatGrowthPercent(data.growth[field]);
           });
-          drawHistoryChart(data.history);
+          drawHistoryChart(data.history, data.days);
         } catch (error) {
+          if (requestId !== historyRequestId) return;
           console.error(error);
           document.getElementById("historyEmpty").textContent =
             "ERROR: Unable to retrieve history.";
@@ -1459,9 +1570,80 @@
 
       const dashboardName = document.getElementById("dashboardName");
       let configurationComplete = null;
+      const terminalStartedKey = "xavis-terminal-started";
+      let terminalStarted =
+        window.localStorage.getItem(terminalStartedKey) === "true";
+      const terminalHistoryKey = "xavis-terminal-history";
+      const terminalWelcome = [
+        "XAVIS local system launcher",
+        "Type /usr/local/system/start to start the dashboard.",
+      ];
+      let terminalHistory = terminalWelcome;
       const savedDashboardName = window.localStorage.getItem(
         "xavis-dashboard-name",
       );
+
+      function loadTerminalHistory() {
+        try {
+          const saved = window.localStorage.getItem(terminalHistoryKey);
+          if (!saved) return;
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.every((line) => typeof line === "string")) {
+            terminalHistory = parsed;
+          }
+        } catch (error) {
+          console.warn("Unable to restore terminal history", error);
+        }
+      }
+
+      function renderTerminalHistory() {
+        const output = document.getElementById("terminalOutput");
+        output.innerHTML = "";
+        terminalHistory.forEach((line) => {
+          const element = document.createElement("div");
+          element.textContent = line;
+          output.appendChild(element);
+        });
+      }
+
+      function appendTerminalLine(line) {
+        terminalHistory.push(line);
+        window.localStorage.setItem(
+          terminalHistoryKey,
+          JSON.stringify(terminalHistory),
+        );
+        const element = document.createElement("div");
+        element.textContent = line;
+        document.getElementById("terminalOutput").appendChild(element);
+      }
+
+      loadTerminalHistory();
+      if (
+        !terminalStarted &&
+        terminalHistory.includes("root@xavis:~$ /usr/local/system/start")
+      ) {
+        terminalStarted = true;
+        window.localStorage.setItem(terminalStartedKey, "true");
+      }
+      renderTerminalHistory();
+
+      async function syncTerminalState() {
+        try {
+          const response = await fetch("/api/terminal/status");
+          if (!response.ok) return;
+          const data = await response.json();
+          terminalStarted = Boolean(data.started);
+          window.localStorage.setItem(
+            terminalStartedKey,
+            String(terminalStarted),
+          );
+          if (!terminalStarted && window.location.pathname !== "/terminal") {
+            showPage("terminal", false);
+          }
+        } catch (error) {
+          console.warn("Unable to synchronize terminal state", error);
+        }
+      }
 
       function resizeDashboardName() {
         dashboardName.style.width = `${Math.max(7, dashboardName.value.length + 1)}ch`;
@@ -1472,6 +1654,9 @@
       }
 
       function showPage(pageName, updateUrl = true) {
+        if (!terminalStarted && pageName !== "terminal") {
+          pageName = "terminal";
+        }
         if (
           configurationComplete === false &&
           !["config", "terminal"].includes(pageName)
@@ -1578,6 +1763,21 @@
         }
       });
 
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || event.defaultPrevented) return;
+        const target = event.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLButtonElement
+        ) {
+          return;
+        }
+        event.preventDefault();
+        dashboardName.focus();
+        dashboardName.select();
+      });
+
       document.getElementById("saveConfig").addEventListener("click", saveConfig);
       document.getElementById("resetConfig").addEventListener("click", resetConfig);
       document
@@ -1585,6 +1785,12 @@
         .addEventListener("keydown", (event) => {
           if (event.key === "Enter") runTerminalCommand();
         });
+      document.querySelectorAll(".history-period").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedHistoryDays = Number(button.dataset.days);
+          loadHistory(selectedHistoryDays);
+        });
+      });
 
       window.addEventListener("popstate", () => {
         const path = window.location.pathname;
@@ -1593,6 +1799,7 @@
 
       const initialPath = window.location.pathname;
       showPage(initialPath.slice(1) || "terminal", false);
+      syncTerminalState();
 
       /* ================================
        LOAD EVERYTHING
