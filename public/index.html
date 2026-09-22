@@ -1322,22 +1322,20 @@
         const command = input.value.trim();
         if (!command) return;
 
-        const entered = document.createElement("div");
-        entered.textContent = `root@xavis:~$ ${command}`;
-        output.appendChild(entered);
+        if (command === "/usr/local/system/start") {
+          terminalHistory = [];
+          output.innerHTML = "";
+        }
+        appendTerminalLine(`root@xavis:~$ ${command}`);
         input.value = "";
 
         if (command !== "/usr/local/system/start") {
-          const error = document.createElement("div");
-          error.textContent = "ERROR: command not found";
-          output.appendChild(error);
+          appendTerminalLine("ERROR: command not found");
           input.focus();
           return;
         }
 
-        const starting = document.createElement("div");
-        starting.textContent = "Starting node server.js in background...";
-        output.appendChild(starting);
+        appendTerminalLine("Starting node server.js in background...");
         input.disabled = true;
         try {
           const response = await fetch("/api/terminal/start", {
@@ -1348,9 +1346,7 @@
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
           terminalStarted = true;
-          const ready = document.createElement("div");
-          ready.textContent = data.message;
-          output.appendChild(ready);
+          appendTerminalLine(data.message);
           window.setTimeout(() => {
             window.location.assign(data.redirectPath);
           }, 250);
@@ -1361,10 +1357,9 @@
             const configData = await configResponse.json();
             if (!configResponse.ok) throw new Error(configData.error);
             terminalStarted = true;
-            const compatible = document.createElement("div");
-            compatible.textContent =
-              "node server.js is already running in the background.";
-            output.appendChild(compatible);
+            appendTerminalLine(
+              "node server.js is already running in the background.",
+            );
             window.setTimeout(() => {
               window.location.assign(
                 configData.youtubeApiKeyConfigured && configData.youtubeChannelId
@@ -1374,10 +1369,9 @@
             }, 250);
           } catch (fallbackError) {
             console.error(fallbackError);
-            const failed = document.createElement("div");
-            failed.textContent =
-              "ERROR: node server.js is not reachable. Start it once with: node server.js";
-            output.appendChild(failed);
+            appendTerminalLine(
+              "ERROR: node server.js is not reachable. Start it once with: node server.js",
+            );
             input.disabled = false;
             input.focus();
           }
@@ -1556,9 +1550,52 @@
       const dashboardName = document.getElementById("dashboardName");
       let configurationComplete = null;
       let terminalStarted = false;
+      const terminalHistoryKey = "xavis-terminal-history";
+      const terminalWelcome = [
+        "XAVIS local system launcher",
+        "Type /usr/local/system/start to start the dashboard.",
+      ];
+      let terminalHistory = terminalWelcome;
       const savedDashboardName = window.localStorage.getItem(
         "xavis-dashboard-name",
       );
+
+      function loadTerminalHistory() {
+        try {
+          const saved = window.localStorage.getItem(terminalHistoryKey);
+          if (!saved) return;
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.every((line) => typeof line === "string")) {
+            terminalHistory = parsed;
+          }
+        } catch (error) {
+          console.warn("Unable to restore terminal history", error);
+        }
+      }
+
+      function renderTerminalHistory() {
+        const output = document.getElementById("terminalOutput");
+        output.innerHTML = "";
+        terminalHistory.forEach((line) => {
+          const element = document.createElement("div");
+          element.textContent = line;
+          output.appendChild(element);
+        });
+      }
+
+      function appendTerminalLine(line) {
+        terminalHistory.push(line);
+        window.localStorage.setItem(
+          terminalHistoryKey,
+          JSON.stringify(terminalHistory),
+        );
+        const element = document.createElement("div");
+        element.textContent = line;
+        document.getElementById("terminalOutput").appendChild(element);
+      }
+
+      loadTerminalHistory();
+      renderTerminalHistory();
 
       function resizeDashboardName() {
         dashboardName.style.width = `${Math.max(7, dashboardName.value.length + 1)}ch`;
