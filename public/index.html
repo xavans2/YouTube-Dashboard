@@ -1672,6 +1672,21 @@
         }
       });
 
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || event.defaultPrevented) return;
+        const target = event.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLButtonElement
+        ) {
+          return;
+        }
+        event.preventDefault();
+        dashboardName.focus();
+        dashboardName.select();
+      });
+
       document.getElementById("saveConfig").addEventListener("click", saveConfig);
       document.getElementById("resetConfig").addEventListener("click", resetConfig);
       document
