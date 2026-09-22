@@ -1329,6 +1329,25 @@
         appendTerminalLine(`root@xavis:~$ ${command}`);
         input.value = "";
 
+        const pageCommand = command.match(
+          /^\/usr\/local\/system\/(dashboard|vid-data|top-vids|alerts|system|help|config|terminal)$/,
+        );
+        if (pageCommand) {
+          if (!terminalStarted) {
+            appendTerminalLine(
+              "ERROR: run /usr/local/system/start before opening a page",
+            );
+            input.focus();
+            return;
+          }
+          const pagePath = `/${pageCommand[1]}`;
+          appendTerminalLine(`Opening ${pagePath}...`);
+          window.setTimeout(() => {
+            window.location.assign(pagePath);
+          }, 250);
+          return;
+        }
+
         if (command !== "/usr/local/system/start") {
           appendTerminalLine("ERROR: command not found");
           input.focus();
