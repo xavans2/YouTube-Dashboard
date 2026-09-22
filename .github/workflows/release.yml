@@ -39,6 +39,30 @@ jobs:
         run: npm ci
 
       - name: Build and publish ${{ matrix.target }} ${{ matrix.arch }}
-        run: npm run dist -- --${{ matrix.target }} --${{ matrix.arch }} --publish always
+        run: npm run dist -- --${{ matrix.target }} --${{ matrix.arch }} --publish never
+
+      - name: Upload ${{ matrix.target }} ${{ matrix.arch }} build
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}-${{ matrix.arch }}
+          path: dist/*
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all platform builds
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish one GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release-assets/* \
+            --title "Xavis Analytics ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --latest
