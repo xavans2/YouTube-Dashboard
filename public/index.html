@@ -1347,6 +1347,7 @@
           });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
+          terminalStarted = true;
           const ready = document.createElement("div");
           ready.textContent = data.message;
           output.appendChild(ready);
@@ -1359,6 +1360,7 @@
             const configResponse = await fetch("/api/config");
             const configData = await configResponse.json();
             if (!configResponse.ok) throw new Error(configData.error);
+            terminalStarted = true;
             const compatible = document.createElement("div");
             compatible.textContent =
               "node server.js is already running in the background.";
@@ -1553,6 +1555,7 @@
 
       const dashboardName = document.getElementById("dashboardName");
       let configurationComplete = null;
+      let terminalStarted = false;
       const savedDashboardName = window.localStorage.getItem(
         "xavis-dashboard-name",
       );
@@ -1566,6 +1569,9 @@
       }
 
       function showPage(pageName, updateUrl = true) {
+        if (!terminalStarted && pageName !== "terminal") {
+          pageName = "terminal";
+        }
         if (
           configurationComplete === false &&
           !["config", "terminal"].includes(pageName)

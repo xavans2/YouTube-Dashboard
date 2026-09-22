@@ -17,6 +17,7 @@ const { buildHealthStatus } = require("./lib/health");
 const app = express();
 const PORT = 3000;
 const HISTORY_DAYS = MAX_HISTORY_DAYS;
+let terminalStarted = false;
 
 const dataDirectory = path.join(__dirname, "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
@@ -61,6 +62,9 @@ app.use(express.static("public", { index: false }));
 app.get("/", (req, res) => res.redirect("/terminal"));
 
 app.get(["/dashboard", "/vid-data", "/top-vids", "/alerts", "/system", "/help", "/config", "/terminal"], (req, res) => {
+    if (!terminalStarted && req.path !== "/terminal") {
+        return res.redirect("/terminal");
+    }
     if (!configStore.isComplete() && !["/config", "/terminal"].includes(req.path)) {
         return res.redirect("/config");
     }
@@ -86,6 +90,7 @@ app.post("/api/terminal/start", (req, res) => {
         });
     }
 
+    terminalStarted = true;
     res.json({
         ok: true,
         status: "already-running",
