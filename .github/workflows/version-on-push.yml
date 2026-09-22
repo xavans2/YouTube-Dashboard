@@ -44,4 +44,4 @@ jobs:
           git add package.json package-lock.json
           git commit -m "chore(release): bump version to ${NEXT_VERSION} [skip version]"
           git tag "${NEXT_VERSION}"
-          git push origin HEAD:main --follow-tags
+          git push origin HEAD:main --tags
