@@ -15,11 +15,11 @@ const { createConfigStore } = require("./lib/config-store");
 const { buildHealthStatus } = require("./lib/health");
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const HISTORY_DAYS = MAX_HISTORY_DAYS;
 let terminalStarted = false;
 
-const dataDirectory = path.join(__dirname, "data");
+const dataDirectory = process.env.XAVIS_DATA_DIR || path.join(__dirname, "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
 
 const db = new Database(path.join(dataDirectory, "analytics.db"));
@@ -57,7 +57,7 @@ function getYoutubeClient() {
 }
 
 app.use(express.json());
-app.use(express.static("public", { index: false }));
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
 app.get("/", (req, res) => res.redirect("/terminal"));
 
@@ -299,6 +299,24 @@ app.get("/api/videos", async (req, res) => {
 // START SERVER
 // ================================
 
-app.listen(PORT, () => {
-    console.log(`Xavis Analytics draait op http://localhost:${PORT}`);
-});
+function startServer(port = PORT, host = "127.0.0.1") {
+    return new Promise((resolve, reject) => {
+        const server = app.listen(port, host, () => {
+            const address = server.address();
+            const actualPort = address && typeof address === "object" ? address.port : port;
+            console.log(`Xavis Analytics draait op http://${host}:${actualPort}`);
+            resolve(server);
+        });
+
+        server.once("error", reject);
+    });
+}
+
+if (require.main === module) {
+    startServer().catch(error => {
+        console.error("Xavis Analytics kon niet starten:", error);
+        process.exitCode = 1;
+    });
+}
+
+module.exports = { app, startServer };

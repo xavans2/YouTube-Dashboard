@@ -4,3 +4,5 @@ data/*.db
 data/*.db-*
 data/config.json
 planning/
+dist/
+out/

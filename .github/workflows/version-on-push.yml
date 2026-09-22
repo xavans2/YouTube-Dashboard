@@ -1,0 +1,47 @@
+name: Version and tag push
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: version-main
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: ${{ !contains(github.event.head_commit.message, '[skip version]') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Increment patch version
+        id: version
+        run: |
+          next_version=$(npm version patch --no-git-tag-version)
+          echo "version=${next_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version and create tag
+        env:
+          NEXT_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore(release): bump version to ${NEXT_VERSION} [skip version]"
+          git tag "${NEXT_VERSION}"
+          git push origin HEAD:main --follow-tags

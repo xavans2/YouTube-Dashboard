@@ -1,12 +1,14 @@
 {
   "name": "xavis-analytics",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Local YouTube analytics dashboard with a terminal-style interface",
+  "main": "electron/main.js",
   "scripts": {
     "test": "node --test",
-    "lint": "node --check server.js && node --check lib/history.js && node --check lib/history-store.js && node --check lib/config-store.js && node --check lib/health.js && node --check lib/snapshot-job.js && node --check scripts/collect-snapshot.js",
-    "collect:snapshot": "node scripts/collect-snapshot.js"
+    "lint": "node --check server.js && node --check electron/main.js && node --check lib/history.js && node --check lib/history-store.js && node --check lib/config-store.js && node --check lib/health.js && node --check lib/snapshot-job.js && node --check scripts/collect-snapshot.js",
+    "collect:snapshot": "node scripts/collect-snapshot.js",
+    "desktop": "electron .",
+    "dist": "electron-builder"
   },
   "keywords": [],
   "author": "",
@@ -14,7 +16,43 @@
   "type": "commonjs",
   "dependencies": {
     "better-sqlite3": "^13.0.3",
+    "electron-updater": "^6.8.9",
     "express": "^5.2.1",
     "googleapis": "^181.0.0"
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.xavis.analytics",
+    "productName": "Xavis Analytics",
+    "files": [
+      "electron/**/*",
+      "lib/**/*",
+      "public/**/*",
+      "server.js",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "xavans2",
+      "repo": "YouTube-Dashboard"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
