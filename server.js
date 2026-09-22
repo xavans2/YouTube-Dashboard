@@ -3,6 +3,7 @@ const { google } = require("googleapis");
 const fs = require("fs");
 const path = require("path");
 const Database = require("better-sqlite3");
+const { version: appVersion } = require("./package.json");
 const {
     buildHistoryWithCarryForward,
     calculateGrowth,
@@ -81,6 +82,10 @@ app.get("/subs", (req, res) => {
 
 app.get("/api/config", (req, res) => {
     res.json(configStore.public());
+});
+
+app.get("/api/version", (req, res) => {
+    res.json({ name: "Xavis Analytics", version: appVersion });
 });
 
 app.get("/api/terminal/status", (req, res) => {

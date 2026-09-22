@@ -21,6 +21,9 @@ test("supports terminal page commands while keeping the shared page bar", () => 
     assert.match(html, /dashboard\|vid-data\|top-vids\|alerts\|system\|config\|terminal/);
     assert.match(html, /const systemCommand = command === "\/usr\/local\/system"/);
     assert.match(html, /const helpCommand = command === "-h"/);
+    assert.match(html, /const versionCommand = command === "--version"/);
+    assert.match(html, /api\/version/);
+    assert.match(html, /Type --version to show the current version/);
     assert.match(html, /Type -h for command help/);
     assert.match(html, /window\.location\.assign\(pagePath\)/);
     assert.match(html, /\/usr\/local\/system\/<input/);

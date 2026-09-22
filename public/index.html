@@ -840,6 +840,7 @@
         <div>XAVIS local system launcher</div>
         <div>Type /usr/local/system/start to start the dashboard.</div>
         <div>Type -h for command help.</div>
+        <div>Type --version to show the current version.</div>
           </div>
           <div class="terminal-prompt">
             <span class="terminal-prompt-label">root@xavis:~$</span>
@@ -1405,6 +1406,20 @@
         );
         const systemCommand = command === "/usr/local/system";
         const helpCommand = command === "-h";
+        const versionCommand = command === "--version";
+        if (versionCommand) {
+          try {
+            const response = await fetch("/api/version");
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+            appendTerminalLine(`${data.name} v${data.version}`);
+          } catch (error) {
+            console.error(error);
+            appendTerminalLine("ERROR: unable to retrieve version");
+          }
+          input.focus();
+          return;
+        }
         if (pageCommand || systemCommand || helpCommand) {
           if (!terminalStarted) {
             appendTerminalLine(
